@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G2 Product Suite & Proposal Builder - FY27</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Figtree','Lato','Helvetica Neue',Arial,sans-serif;background:#F2F4F7}
+input,select,button{font-family:inherit}
+.ctr{max-width:1180px;margin:0 auto;padding:0 24px}
+.pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;color:#fff}
+.btn{padding:9px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:5px}
+.btn-pri{background:#FF492C;color:#fff}
+.btn-sec{background:#062846;color:#fff}
+.btn-out{background:#fff;color:#062846;border:1.5px solid #D9DEE6}
+.btn-grn{background:#27D3BC;color:#062846}
+.btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn-ghost:hover{background:rgba(255,255,255,.2)}
+.card{background:#fff;border-radius:10px;border:1px solid #E2E8F0}
+.card-hover{transition:transform .15s,box-shadow .15s;cursor:pointer}
+.card-hover:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(6,40,70,.1)}
+.inp{padding:7px 11px;border:1.5px solid #D9DEE6;border-radius:5px;font-size:13px;outline:none;transition:border-color .15s}
+.inp:focus{border-color:#0073F5}
+.inp-r{text-align:right;width:110px}
+.inp-qty{text-align:center;width:58px}
+.inp-name{width:100%}
+/* Mode switch */
+.mode-bar{display:flex;background:rgba(255,255,255,.08);border-radius:8px;padding:3px;gap:3px}
+.mode-btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;color:#B0BACA;background:transparent}
+.mode-btn.on{background:#fff;color:#062846;box-shadow:0 1px 4px rgba(6,40,70,.1)}
+/* Sub-tabs */
+.stab{padding:10px 20px;border:none;border-radius:8px 8px 0 0;font-size:13px;cursor:pointer;font-weight:500;transition:all .15s}
+.stab.on{background:#fff;color:#062846;font-weight:700;box-shadow:0 -2px 8px rgba(6,40,70,.06)}
+.stab:not(.on){background:rgba(255,255,255,.07);color:#B0BACA}
+/* Product tabs */
+.ptab{display:inline-block;padding:8px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #E2E8F0;border-bottom:none;margin-right:2px}
+.ptab.on{background:#fff;color:#062846;border-bottom:1px solid #fff;margin-bottom:-1px;position:relative;z-index:1}
+.ptab:not(.on){background:#F2F4F7;color:#7D8FA6}
+/* Rows */
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #F2F4F7}
+.row:last-child{border-bottom:none}
+.sline{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F2F4F7;font-size:14px}
+.sline:last-child{border-bottom:none}
+/* Toggle */
+.tgl{position:relative;width:40px;height:22px;border-radius:11px;cursor:pointer;transition:background .2s}
+.tgl.yes{background:#27D3BC}.tgl.no{background:#D9DEE6}
+.tgl-k{position:absolute;top:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+/* Addon accordion */
+.addon-row{border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;transition:border-color .15s;margin-bottom:8px}
+.addon-row.open{border-color:var(--accent)}
+.addon-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer}
+.addon-hdr:hover{opacity:.95}
+.addon-body{padding:0 20px 18px}
+.addon-body p{font-size:13px;color:#062846;line-height:1.6;margin:0 0 14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;color:#fff;font-weight:600}
+th:last-child{text-align:right;border-radius:0 4px 0 0}
+th:first-child{border-radius:4px 0 0 0}
+td{padding:7px 10px;color:#062846}
+td:last-child{font-weight:700;text-align:right}
+.extras-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.extras-grid div{font-size:11px;color:#4D6480;padding:4px 8px;background:#fff;border-radius:4px}
+/* Modal overlay */
+.overlay{position:fixed;inset:0;background:rgba(6,40,70,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(6,40,70,.25)}
+.modal-lg{max-width:720px}
+.modal-hdr{padding:20px 24px 16px;border-bottom:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #E2E8F0;display:flex;justify-content:flex-end;gap:10px}
+/* Login screen */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#062846;padding:20px}
+.login-card{background:#fff;border-radius:14px;padding:40px 44px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+/* Proposal list item */
+.prop-item{padding:14px 16px;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;transition:all .15s;margin-bottom:8px}
+.prop-item:hover{border-color:#0073F5;background:#F0F7FF}
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#E2E8F0;color:#4D6480}
+.badge-new{background:#E0FAF6;color:#1a9e8c}
+@media print{body{background:#fff}.no-print{display:none!important}.card{box-shadow:none;border:1px solid #E2E8F0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useEffect,useCallback}=React;
+
+/* ========== API helpers (calls Flask backend) ========== */
+const api = {
+  async listProposals() {
+    const r = await fetch("/api/proposals"); return (await r.json()).data || [];
+  },
+  async createProposal(body) {
+    const r = await fetch("/api/proposals", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    return (await r.json()).data;
+  },
+  async updateProposal(id, body) {
+    const r = await fetch(`/api/proposals/${id}`, {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    return (await r.json()).data;
+  },
+  async listVersions(proposalId) {
+    const r = await fetch(`/api/proposals/${proposalId}/versions`); return (await r.json()).data || [];
+  },
+  async createVersion(proposalId, body) {
+    const r = await fetch(`/api/proposals/${proposalId}/versions`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    return (await r.json()).data;
+  },
+  async getVersion(versionId) {
+    const r = await fetch(`/api/versions/${versionId}`); return (await r.json()).data;
+  },
+};
+
+/* ========== TEAM ACCESS — shared credentials ========== */
+const TEAM_USER = "G2products";
+const TEAM_PASS = "Enterprise1";
+
+/* ========== GOOGLE SLIDES OAUTH ========== */
+// To enable Google Slides export:
+//  1. Go to https://console.cloud.google.com
+//  2. Create a project → Enable "Google Drive API"
+//  3. Credentials → Create OAuth 2.0 Client ID (type: Web Application)
+//  4. Add Authorized JavaScript origins: http://localhost:5001 + your public tunnel URL
+//  5. Paste the Client ID below
+const GOOGLE_CLIENT_ID = ""; // ← paste e.g. "123456789-abc.apps.googleusercontent.com"
+
+let _gsAccessToken = null, _gsTokenExpiry = 0;
+function _getGoogleToken() {
+  return new Promise((resolve, reject) => {
+    if (_gsAccessToken && Date.now() < _gsTokenExpiry) { resolve(_gsAccessToken); return; }
+    if (typeof google === "undefined" || !google.accounts) {
+      reject(new Error("Google Identity Services library did not load. Check your internet connection.")); return;
+    }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "https://www.googleapis.com/auth/drive.file",
+      callback: (resp) => {
+        if (resp.error) { reject(new Error(resp.error_description || resp.error)); return; }
+        _gsAccessToken = resp.access_token;
+        _gsTokenExpiry = Date.now() + ((resp.expires_in || 3600) - 120) * 1000;
+        resolve(_gsAccessToken);
+      },
+      error_callback: (err) => reject(new Error(err.type || "Auth error"))
+    });
+    client.requestAccessToken({ prompt: "" }); // empty string = skip consent if already granted
+  });
+}
+
+/* ========== COLORS & UTILS ========== */
+const C={rorange:"#FF492C",navy:"#062846",purple:"#5746B2",blue:"#0073F5",green:"#27D3BC",yellow:"#FFC800",light:"#F2F4F7",mid:"#4D6480",
+  rorangeTint:"#FFF0ED",purpleTint:"#EDEAF9",blueTint:"#E8F1FF",greenTint:"#E0FAF6",yellowTint:"#FFF9E0"};
+const fmt=n=>{if(!n||n===0)return"$0";return"$"+Number(n).toLocaleString("en-US")};
+const pn=s=>{const n=parseFloat(String(s).replace(/[^0-9.\-]/g,""));return isNaN(n)?0:n};
+let _pid=1;const mkId=()=>_pid++;
+
+/* ========== FULL PRODUCT CATALOG (Reference Data) ========== */
+const FOUNDATION_TIERS=[
+  {name:"Free",price:"$0",color:C.mid,headline:"Get listed on G2",
+   highlights:["Logo on G2 Profile & Reports","Seller Pages (basic)","Review Collection Page (unincentivized)","Users Love Us badge","Review Syndication","AI Sales Agent (G2.com only)","3 user seats","Chat support"]},
+  {name:"Professional",price:"$18,000/yr",color:C.purple,headline:"Capture demand & prove ROI",
+   highlights:["Everything in Free, plus:","Banner, Premium Seller Pages","Review Refresh Campaigns","Review Collection API & Integrations","Video Reviews (3 included)","Written Review Campaigns ($500 credit)","Lead Forms & Lead Routing Integrations","Profile Visitor Data","G2 Deals (included)","AI Sales Agent ($500 chat credit)","ROI Performance Analytics","Reviews Data Export & API","Reference Pages & Crowd Quotes","10 user seats, SSO","Priority Support & Assigned AM","Buyer Intent available as add-on","G2 Content available as add-on"]},
+  {name:"Enterprise",price:"$34,000/yr",color:C.rorange,headline:"Full platform + intelligence",
+   highlights:["Everything in Professional, plus:","Solutions Pages (custom product groupings)","Multi-Product Review Collection & Leads","Market Intelligence Dashboard (included)","Video Reviews (5 included)","Written Review Campaigns ($1,000 credit)","AI Sales Agent ($1,000 chat credit)","Unlimited user seats","Buyer Intent available as add-on","G2 Content available as add-on"]},
+];
+
+const ADDON_PRODUCTS=[
+  {id:"intent",name:"Buyer Intent",color:C.blue,tint:C.blueTint,
+   tagline:"Know who's in-market before they raise their hand",availability:"Add-on for Professional & Enterprise",
+   description:"G2 review-powered intent data from 100M+ annual buyers. ICP filters by demographics, firmographics, and technographics. Buyer stage trends, visitor timeline, Slack/email notifications, CSV export, and ABM integrations (6Sense, Kickfire, Dealfront, Clearbit).",
+   tiers:[{label:"Tier 1",detail:"0 - 5K signals",price:"$12,500"},{label:"Tier 2",detail:"5K - 10K signals",price:"$17,000"},{label:"Tier 3",detail:"10K - 15K signals",price:"$25,000"},{label:"Tier 4",detail:"15K - 20K signals",price:"$32,500"},{label:"Tier 5",detail:"20K - 25K signals",price:"$40,000"},{label:"Tier 6",detail:"25K - 30K signals",price:"$47,500"},{label:"Tier 7",detail:"30K - 45K signals",price:"$57,000"},{label:"Tier 8",detail:"45K - 60K signals",price:"$65,000"},{label:"Tier 9",detail:"60K - 100K signals",price:"$70,500"},{label:"Tier 10",detail:"100K+ signals",price:"$75,000"}]},
+  {id:"content",name:"G2 Content",color:C.purple,tint:C.purpleTint,
+   tagline:"Turn G2 data into marketing and sales ammunition",availability:"Add-on for Professional & Enterprise",
+   description:"License G2 report content and social assets for external distribution. Power social proof, demand gen, ABM, and competitive positioning with trusted third-party validation.",
+   tiers:[{label:"Subscription",detail:"Category & Comparison Reports (1 category)",price:"$45,000"},{label:"Subscription",detail:"Category & Comparison Reports (all categories)",price:"$80,000"},{label:"Subscription",detail:"Momentum & Index Reports (1 category)",price:"$13,000"},{label:"Subscription",detail:"Momentum & Index Reports (all categories)",price:"$25,000"},{label:"Subscription",detail:"Regional Grid Reports (1 category/region)",price:"$20,000"},{label:"Individual",detail:"Grid Report",price:"$25,000"},{label:"Individual",detail:"Comparison Report",price:"$18,000"},{label:"Individual",detail:"Segmented Grid Report",price:"$25,000"},{label:"Individual",detail:"Index Reports (Usability, Results, Implementation, Relationship, Momentum)",price:"$7,000 ea"}]},
+  {id:"aicr",name:"AI-Led Custom Research (AICR)",color:C.green,tint:C.greenTint,
+   tagline:"Bespoke, narrative-aligned marketing content backed by real buyer voice",availability:"Available with any profile tier",
+   description:"AI-powered research agents speak to hundreds of real customers in days, not months. Combines customer voice with G2's proprietary data for faster, more actionable insights than analyst firms. Use cases: Thought Leadership, Positioning, Lead Generation, Competitive Edge.",
+   tiers:[{label:"SMART Report",detail:"Reviews-based synthesis, no live interviews",price:"$5,000 - $6,500"},{label:"AI-Powered Research",detail:"~100 live buyer interviews, 2-6 week delivery",price:"$10,000 - $15,000"},{label:"AI-Powered Research",detail:"200-300 live buyer interviews (Full Scale)",price:"~$85,000"},{label:"Post-Pilot Pricing",detail:"100-interview study",price:"$25,000"}]},
+  {id:"clicks",name:"G2 Clicks (Self-Service PPC)",color:C.blue,tint:C.blueTint,
+   tagline:"Connect with active buyers through PPC CTAs that convert 2x better",availability:"All tiers (Free, Professional, Enterprise)",
+   description:"Pay-per-click CTAs on G2 profiles and category listings. 2x conversion rate vs Google Ads, 4.8% average CTR. CPC rate based on SEMRush data for your category keywords. Set custom monthly budgets, test ads, control costs, cancel anytime.",
+   tiers:[{label:"Organic Clicks",detail:"CTA on profile & category listings (prospects)",price:"Pay-per-click"},{label:"Sponsored Ads",detail:"Display ads on Category, Compare, Search, Seller pages",price:"Pay-per-click (CPC)"},{label:"Budget",detail:"Set custom monthly max, cancel anytime",price:"No minimum"}]},
+  {id:"paidpromo",name:"Paid Promotions (Ad Buyouts)",color:C.rorange,tint:C.rorangeTint,
+   tagline:"Guaranteed always-on brand presence on G2 category pages",availability:"Professional & Enterprise",
+   description:"Quarterly or annual buyout of sponsored ad slots with guaranteed 1/3 impression share and priority delivery over Clicks. Custom ad designs available.",
+   tiers:[{label:"Quarterly",detail:"Per slot, per category",price:"$100 - $5,000/qtr"},{label:"Annual",detail:"Per slot, per category",price:"$340 - $17,000/yr"},{label:"Delivery",detail:"Guaranteed 1/3 impression share, priority over Clicks",price:"Included"}]},
+  {id:"rms",name:"Review Managed Services (RMS)",color:C.green,tint:C.greenTint,
+   tagline:"G2 runs your review strategy so you don't have to",availability:"Professional & Enterprise",
+   description:"Full-service review collection managed by G2. Includes defining ideal reviewer personas, tracking documentation, outreach management, and ongoing support.",
+   tiers:[{label:"Accelerator",detail:"1 product, 50 reviews, 12-month term",price:"$10,000/yr"},{label:"Growth",detail:"1 product, 100 reviews, 12-month term (recommended)",price:"$18,000/yr"},{label:"Custom",detail:"Custom scope, custom reporting, dedicated support",price:"Custom"}]},
+  {id:"events",name:"Custom Event Review Activation",color:C.yellow,tint:C.yellowTint,
+   tagline:"Turn your live events into review generation machines",availability:"Professional & Enterprise",
+   description:"Custom G2 review activation support for conferences, user groups, and field events. G2 builds dedicated landing pages, email journeys, moderation SLAs, onsite support, and post-event reporting.",
+   tiers:[{label:"Core",detail:"Pre-event setup: landing pages, QR codes, email setup, standard reporting",price:"$15,000"},{label:"Enhanced",detail:"Full lifecycle: pre, onsite, post-event. Same-day moderation, change management",price:"$25,000"},{label:"Custom",detail:"Tailored to multi-Cloud needs, custom creative, complex workflows",price:"Custom"}],
+   extras:["Dedicated Landing Pages: $4,000","Custom Email Journeys: $3,000","Moderation SLA Upgrades: $5,000","Review Source Tagging & Reporting: $2,500","Talk Tracks & Training Docs: $2,000","Change Management Planning: $2,500","Program Management & Orchestration: $7,000","Onsite G2 Rep (per event): $7,000","Post-Event Reporting Dashboard: $2,500","Review Booth (US): $5,500 | International: $6,500 | Short Notice: +$1,000"]},
+  {id:"mi",name:"Market Intelligence",color:C.navy,tint:"#D9DEE6",
+   tagline:"Structured access to G2's proprietary market data",availability:"Dashboard included in Enterprise; standalone data licensing available",
+   description:"Interactive dashboard with continuously updated data on market trends, competitive landscape, and category benchmarking. Standalone data licensing available for market sizing, portfolio strategy, and analyst use cases.",
+   tiers:[{label:"Dashboard",detail:"Included with Enterprise package",price:"Included"},{label:"Data Licensing",detail:"Custom scope for research and strategic use",price:"Custom"}]},
+  {id:"techconsulting",name:"Technical Consulting",color:C.purple,tint:C.purpleTint,
+   tagline:"Custom architecture that makes G2 data actionable",availability:"Enterprise & Commercial customers",
+   description:"G2 experts design and build tailored technical solutions. Two tracks: Advisory Services (architecture strategy, workflow optimization, API design) and Build Services (custom API implementations, rapid prototyping, workflow automation, enterprise deployment). Data activated in weeks, not quarters.",
+   tiers:[{label:"Free (Pre-Sales)",detail:"Data 101, API Integrations 101",price:"Included"},{label:"Free (Pre-Sales)",detail:"Integration Advisory: multi-integration data flow design",price:"Included w/ onboarding"},{label:"Free (Pre-Sales)",detail:"API Onboarding: API-based solution design",price:"Included w/ onboarding"},{label:"Fixed Fee",detail:"G2 Data Consumption Advisory: end-to-end system design",price:"Fixed"},{label:"Hourly Rate",detail:"Custom BI Integration Development",price:"Hourly + computing"},{label:"Hourly Rate",detail:"Custom Data Pipeline",price:"Hourly + maintenance"},{label:"Hourly Rate",detail:"Custom Application Development",price:"Hourly + maintenance"}],
+   extras:["Advisory: Architecture & Integration Strategy","Advisory: Workflow Optimization (intent signals + data)","Advisory: Solution Assessments & architecture reviews","Advisory: Workshops & Education for client/partner teams","Advisory: Integration Consulting (Snowflake, HubSpot, OpenAI, etc.)","Build: Custom API Implementations","Build: Integration Prototyping (sandbox, rapid dev)","Build: Technical Support & Debugging for complex use cases","Build: Partner Ecosystem Enablement","Build: Automation/Workflow Development"]},
+];
+
+const NON_ACV_REF=[
+  {name:"Gift Card Add-Ons",price:"Variable",note:"Non-discountable. Professional+ only."},
+  {name:"Gift Card Accelerator",price:"$0 ($500 value)",note:"Professional+ only."},
+  {name:"Video Review Add-On",price:"$500 each",note:"1 additional video review. Professional+ only."},
+  {name:"Ad Cut (Video Reviews)",price:"$500 each",note:"15-30 second excerpt from existing video review."},
+  {name:"Social Asset Creation",price:"$2,500",note:"3 ad units for Facebook or LinkedIn."},
+  {name:"Infographics",price:"$2,500",note:"Visual data representation from G2 reports."},
+  {name:"Animated GIFs",price:"$2,500",note:"Animated assets from G2 data."},
+  {name:"Report PDF",price:"$2,000",note:"Professionally formatted downloadable PDF."},
+];
+
+/* ========== PROPOSAL BUILDER CATALOG ========== */
+const BASE_PKGS=[
+  {id:"free",name:"Free",list:0,color:C.mid,hl:"Get listed on G2"},
+  {id:"professional",name:"Professional",list:18000,color:C.purple,hl:"Capture demand & prove ROI"},
+  {id:"enterprise",name:"Enterprise",list:34000,color:C.rorange,hl:"Full platform + intelligence"},
+];
+
+const ADDON_CATALOG=[
+  {id:"intent",name:"Buyer Intent",color:C.blue,tint:C.blueTint,tiers:[
+    {l:"Tier 1: 0-5K signals",p:12500},{l:"Tier 2: 5K-10K signals",p:17000},{l:"Tier 3: 10K-15K signals",p:25000},
+    {l:"Tier 4: 15K-20K signals",p:32500},{l:"Tier 5: 20K-25K signals",p:40000},{l:"Tier 6: 25K-30K signals",p:47500},
+    {l:"Tier 7: 30K-45K signals",p:57000},{l:"Tier 8: 45K-60K signals",p:65000},{l:"Tier 9: 60K-100K signals",p:70500},
+    {l:"Tier 10: 100K+ signals",p:75000}]},
+  {id:"content",name:"G2 Content",color:C.purple,tint:C.purpleTint,tiers:[
+    {l:"Cat & Comparison (1 cat)",p:45000},{l:"Cat & Comparison (all cats)",p:80000},
+    {l:"Momentum & Index (1 cat)",p:13000},{l:"Momentum & Index (all cats)",p:25000},
+    {l:"Regional Grid (1 cat/region)",p:20000},{l:"Grid Report (individual)",p:25000},
+    {l:"Comparison Report (individual)",p:18000},{l:"Segmented Grid (individual)",p:25000},
+    {l:"Index Report (individual)",p:7000}]},
+  {id:"aicr",name:"AI-Led Custom Research (AICR)",color:C.green,tint:C.greenTint,tiers:[
+    {l:"SMART Report (reviews-based)",p:5000},{l:"AI Research (~100 interviews)",p:10000},
+    {l:"AI Research (200-300 interviews)",p:85000},{l:"Post-Pilot (100 interviews)",p:25000}]},
+  {id:"clicks",name:"G2 Clicks (PPC)",color:C.blue,tint:C.blueTint,tiers:[{l:"Monthly PPC Budget",p:5000}]},
+  {id:"paidpromo",name:"Paid Promotions",color:C.rorange,tint:C.rorangeTint,tiers:[
+    {l:"Quarterly slot (per category)",p:5000},{l:"Annual slot (per category)",p:17000}]},
+  {id:"rms",name:"Review Managed Services",color:C.green,tint:C.greenTint,tiers:[
+    {l:"Accelerator (1 product, 50 reviews)",p:10000},{l:"Growth (1 product, 100 reviews)",p:18000}]},
+  {id:"events",name:"Custom Event Activation",color:C.yellow,tint:C.yellowTint,tiers:[
+    {l:"Core Package",p:15000},{l:"Enhanced Package",p:25000},
+    {l:"Review Booth (US)",p:5500},{l:"Review Booth (International)",p:6500},{l:"Onsite G2 Rep",p:7000}]},
+  {id:"mi",name:"Market Intelligence",color:C.navy,tint:"#D9DEE6",tiers:[{l:"Data Licensing (custom scope)",p:0}]},
+  {id:"techconsulting",name:"Technical Consulting",color:C.purple,tint:C.purpleTint,tiers:[
+    {l:"Data Consumption Advisory (fixed)",p:0},{l:"Custom BI Integration (hourly)",p:0},
+    {l:"Custom Data Pipeline (hourly)",p:0},{l:"Custom App Development (hourly)",p:0}]},
+];
+
+const NONAVC_CATALOG=[
+  {id:"giftcards",name:"Gift Card Add-Ons",list:0,note:"Variable, non-discountable"},
+  {id:"videoreview",name:"Video Review Add-On",list:500,note:"Per additional video"},
+  {id:"adcut",name:"Ad Cut (Video Reviews)",list:500,note:"15-30s excerpt"},
+  {id:"social",name:"Social Asset Creation",list:2500,note:"3 ad units"},
+  {id:"infographic",name:"Infographics",list:2500,note:"Visual data from G2 reports"},
+  {id:"animatedgif",name:"Animated GIFs",list:2500,note:"Animated assets"},
+  {id:"reportpdf",name:"Report PDF",list:2000,note:"Formatted downloadable PDF"},
+];
+
+/* ========== SHARED COMPONENTS ========== */
+function Pill({color,children}){return <span className="pill" style={{background:color}}>{children}</span>}
+function Toggle({on,onChange}){return <div className={`tgl ${on?"yes":"no"}`} onClick={()=>onChange(!on)}><div className="tgl-k" style={{left:on?20:2}}/></div>}
+function SectionTitle({children,sub}){return <div style={{marginBottom:16}}><h2 style={{fontSize:20,fontWeight:700,color:C.navy,letterSpacing:"-.3px"}}>{children}</h2>{sub&&<p style={{fontSize:13,color:C.mid,marginTop:4}}>{sub}</p>}</div>}
+
+function mkProduct(name){return{id:mkId(),name:name||"Product "+(_pid-1),basePkg:"professional",baseRate:"",baseDisc:"",addons:{}};}
+const calcDisc=(rate,list)=>list>0?Math.round((1-pn(rate)/list)*1000)/10:0;
+const calcRate=(disc,list)=>Math.round(list*(1-pn(disc)/100));
+
+/* ================================================================
+   LOGIN GATE
+   ================================================================ */
+function LoginGate({onAuth}){
+  const [user,setUser]=useState("");
+  const [pass,setPass]=useState("");
+  const [err,setErr]=useState(false);
+  const [loading,setLoading]=useState(false);
+
+  const submit=()=>{
+    setLoading(true);
+    setTimeout(()=>{
+      if(user===TEAM_USER&&pass===TEAM_PASS){
+        sessionStorage.setItem("g2auth","1");
+        onAuth();
+      }else{
+        setErr(true);
+        setLoading(false);
+      }
+    },400);
+  };
+
+  return <div className="login-wrap">
+    <div className="login-card">
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,marginBottom:16}}>
+          <div style={{width:36,height:36,background:C.rorange,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{color:"#fff",fontWeight:800,fontSize:18}}>G2</span>
+          </div>
+        </div>
+        <h1 style={{fontSize:22,fontWeight:800,color:C.navy}}>Proposal Builder</h1>
+        <p style={{fontSize:13,color:C.mid,marginTop:4}}>FY27 · Internal Only</p>
+      </div>
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.mid,marginBottom:4}}>USERNAME</div>
+        <input className="inp" style={{width:"100%"}} type="text" value={user}
+          onChange={e=>{setUser(e.target.value);setErr(false);}}
+          onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Team username" autoFocus/>
+      </div>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.mid,marginBottom:4}}>PASSWORD</div>
+        <input className="inp" style={{width:"100%"}} type="password" value={pass}
+          onChange={e=>{setPass(e.target.value);setErr(false);}}
+          onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Team password"/>
+      </div>
+      {err&&<div style={{background:"#FFF0ED",border:"1px solid #FF492C",borderRadius:6,padding:"8px 12px",fontSize:12,color:C.rorange,marginBottom:14}}>
+        Incorrect credentials. Please try again.
+      </div>}
+      <button className="btn btn-pri" style={{width:"100%",padding:"11px"}} onClick={submit} disabled={loading}>
+        {loading?"Signing in…":"Sign In"}
+      </button>
+    </div>
+  </div>;
+}
+
+/* ================================================================
+   SAVE MODAL
+   ================================================================ */
+function SaveModal({isNew,proposalName,setProposalName,saveNote,setSaveNote,onSave,onClose,saving}){
+  return <div className="overlay" onClick={onClose}>
+    <div className="modal" onClick={e=>e.stopPropagation()}>
+      <div className="modal-hdr">
+        <div>
+          <div style={{fontWeight:700,fontSize:16,color:C.navy}}>{isNew?"Save Proposal":"Save New Version"}</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:2}}>{isNew?"Creates a new proposal in your team's library":"Adds a version snapshot to this proposal"}</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.mid,lineHeight:1}}>&times;</button>
+      </div>
+      <div className="modal-body">
+        {isNew&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:600,color:C.mid,marginBottom:4}}>PROPOSAL NAME</div>
+          <input className="inp" style={{width:"100%"}} value={proposalName}
+            onChange={e=>setProposalName(e.target.value)} placeholder="e.g. Salesforce FY27"/>
+        </div>}
+        <div>
+          <div style={{fontSize:11,fontWeight:600,color:C.mid,marginBottom:4}}>VERSION NOTES <span style={{fontWeight:400}}>(optional)</span></div>
+          <input className="inp" style={{width:"100%"}} value={saveNote}
+            onChange={e=>setSaveNote(e.target.value)} placeholder="e.g. Initial draft, Updated intent tier, Final pricing"/>
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button className="btn btn-out" onClick={onClose}>Cancel</button>
+        <button className="btn btn-pri" onClick={onSave} disabled={saving||(!isNew&&false)||(isNew&&!proposalName)}>
+          {saving?"Saving…":"Save"}
+        </button>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ================================================================
+   LOAD MODAL
+   ================================================================ */
+function LoadModal({onClose,onLoad,onViewHistory}){
+  const [proposals,setProposals]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState("");
+  const [err,setErr]=useState(null);
+
+  useEffect(()=>{
+    api.listProposals()
+      .then(data=>{setProposals(data);setLoading(false);})
+      .catch(e=>{setErr(e.message);setLoading(false);});
+  },[]);
+
+  const filtered=proposals.filter(p=>!search||
+    p.name.toLowerCase().includes(search.toLowerCase())||
+    (p.customer&&p.customer.toLowerCase().includes(search.toLowerCase()))||
+    (p.rep&&p.rep.toLowerCase().includes(search.toLowerCase())));
+
+  return <div className="overlay" onClick={onClose}>
+    <div className="modal modal-lg" onClick={e=>e.stopPropagation()}>
+      <div className="modal-hdr">
+        <div>
+          <div style={{fontWeight:700,fontSize:16,color:C.navy}}>Saved Proposals</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:2}}>Click a proposal to load the latest version</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.mid,lineHeight:1}}>&times;</button>
+      </div>
+      <div className="modal-body">
+        <input className="inp" style={{width:"100%",marginBottom:16}} placeholder="Search proposals…"
+          value={search} onChange={e=>setSearch(e.target.value)} autoFocus/>
+        {loading&&<div style={{textAlign:"center",padding:"32px 0",color:C.mid,fontSize:13}}>Loading…</div>}
+        {err&&<div style={{background:"#FFF0ED",border:"1px solid #FF492C",borderRadius:6,padding:"12px",fontSize:12,color:C.rorange}}>{err}</div>}
+        {!loading&&!err&&filtered.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.mid,fontSize:13}}>
+          {proposals.length===0?"No proposals saved yet.":"No proposals match your search."}
+        </div>}
+        {filtered.map(p=>{
+          const updated=new Date(p.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+          return <div key={p.id} className="prop-item" onClick={()=>onLoad(p)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.navy,marginBottom:2}}>{p.name}</div>
+                <div style={{fontSize:12,color:C.mid}}>
+                  {p.customer&&<span>{p.customer}</span>}
+                  {p.customer&&p.rep&&<span style={{margin:"0 6px"}}>·</span>}
+                  {p.rep&&<span>{p.rep}</span>}
+                </div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+                {p.grand_total>0&&<div style={{fontWeight:700,fontSize:13,color:C.rorange}}>{fmt(p.grand_total)}</div>}
+                <div style={{fontSize:11,color:C.mid,marginTop:2}}>{updated}</div>
+                <button onClick={e=>{e.stopPropagation();onViewHistory(p);}}
+                  style={{marginTop:4,background:"none",border:"none",cursor:"pointer",fontSize:11,color:C.blue,textDecoration:"underline",padding:0}}>
+                  Version history
+                </button>
+              </div>
+            </div>
+          </div>;
+        })}
+      </div>
+      <div className="modal-footer">
+        <button className="btn btn-out" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ================================================================
+   VERSION HISTORY MODAL
+   ================================================================ */
+function HistoryModal({proposal,onClose,onLoadVersion}){
+  const [versions,setVersions]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    api.listVersions(proposal.id)
+      .then(data=>{setVersions(data);setLoading(false);})
+      .catch(()=>setLoading(false));
+  },[proposal.id]);
+
+  return <div className="overlay" onClick={onClose}>
+    <div className="modal" onClick={e=>e.stopPropagation()}>
+      <div className="modal-hdr">
+        <div>
+          <div style={{fontWeight:700,fontSize:16,color:C.navy}}>Version History</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:2}}>{proposal.name}</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.mid,lineHeight:1}}>&times;</button>
+      </div>
+      <div className="modal-body">
+        {loading&&<div style={{textAlign:"center",padding:"24px 0",color:C.mid,fontSize:13}}>Loading…</div>}
+        {versions.map((v,i)=>{
+          const dt=new Date(v.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+          return <div key={v.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #F2F4F7"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontWeight:700,fontSize:13,color:C.navy}}>v{v.version_num}</span>
+                {i===0&&<span className="badge badge-new">Latest</span>}
+              </div>
+              <div style={{fontSize:12,color:C.mid,marginTop:2}}>{v.notes||"No notes"}</div>
+              <div style={{fontSize:11,color:"#B0BACA",marginTop:1}}>{dt}</div>
+            </div>
+            <button className="btn btn-sm btn-out" onClick={()=>onLoadVersion(proposal,v.id)}>Load</button>
+          </div>;
+        })}
+      </div>
+      <div className="modal-footer">
+        <button className="btn btn-out" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ================================================================
+   MODE 1: PRODUCT SUITE (Reference)
+   ================================================================ */
+function SuiteMode(){
+  const [view,setView]=useState("overview");
+  const [expandedAddon,setExpandedAddon]=useState(null);
+  const [search,setSearch]=useState("");
+  const tabs=[{id:"overview",label:"How It Works"},{id:"packages",label:"Base Packages"},{id:"addons",label:"Add-On Products"},{id:"nonavc",label:"Non-ACV Items"}];
+
+  return <div>
+    <div style={{display:"flex",gap:2,marginBottom:20}}>
+      {tabs.map(t=><button key={t.id} className={`stab ${view===t.id?"on":""}`} onClick={()=>setView(t.id)}>{t.label}</button>)}
+    </div>
+
+    {/* OVERVIEW */}
+    {view==="overview"&&<div>
+      <SectionTitle sub="Every G2 customer starts with a Base Package, then adds modules to match their go-to-market strategy">How G2 Products Fit Together</SectionTitle>
+      <div style={{marginBottom:24}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{width:28,height:28,borderRadius:"50%",background:C.navy,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:700}}>1</div>
+          <span style={{fontSize:15,fontWeight:700,color:C.navy}}>Choose a Base Package</span>
+          <span style={{fontSize:12,color:C.mid,marginLeft:4}}>Your G2 profile, reviews, demand capture, and analytics foundation</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${FOUNDATION_TIERS.length},1fr)`,gap:10}}>
+          {FOUNDATION_TIERS.map(t=><div key={t.name} className="card-hover" onClick={()=>setView("packages")} style={{borderRadius:8,overflow:"hidden",border:`1px solid ${t.color}22`}}>
+            <div style={{background:t.color,padding:"12px 14px"}}><div style={{color:"#fff",fontWeight:700,fontSize:16}}>{t.name}</div><div style={{color:"rgba(255,255,255,.85)",fontSize:12,marginTop:2}}>{t.price}</div></div>
+            <div style={{padding:"10px 14px",background:C.light,minHeight:60}}><div style={{fontSize:12,fontWeight:600,color:C.navy,marginBottom:4}}>{t.headline}</div><div style={{fontSize:11,color:C.mid,lineHeight:1.5}}>{t.highlights.slice(0,4).join(" · ")}{t.highlights.length>4&&` + ${t.highlights.length-4} more`}</div></div>
+          </div>)}
+        </div>
+      </div>
+      <div style={{textAlign:"center",margin:"4px 0 16px",fontSize:20,color:C.mid}}>+</div>
+      <div style={{marginBottom:24}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{width:28,height:28,borderRadius:"50%",background:C.purple,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:700}}>2</div>
+          <span style={{fontSize:15,fontWeight:700,color:C.navy}}>Add Modules</span>
+          <span style={{fontSize:12,color:C.mid,marginLeft:4}}>Layer on products that match the customer's GTM strategy</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          {[{name:"Buyer Intent",color:C.blue,desc:"Know who's researching your categories",avail:"Pro & Enterprise"},{name:"G2 Content",color:C.purple,desc:"License G2 reports for marketing & sales",avail:"Pro & Enterprise"},{name:"AICR",color:C.green,desc:"AI-powered custom research from real buyers",avail:"Any tier"},{name:"Market Intelligence",color:C.navy,desc:"Structured market and competitive data",avail:"Enterprise (incl) or standalone"}].map(m=>
+            <div key={m.name} className="card-hover" onClick={()=>{setView("addons");setExpandedAddon(m.name==="AICR"?"AI-Led Custom Research (AICR)":m.name);}} style={{borderRadius:8,padding:"14px 16px",background:C.light,borderLeft:`4px solid ${m.color}`}}>
+              <div style={{fontWeight:700,fontSize:13,color:C.navy}}>{m.name}</div><div style={{fontSize:11,color:C.mid,marginTop:4,lineHeight:1.4}}>{m.desc}</div><Pill color={m.color}>{m.avail}</Pill>
+            </div>)}
+        </div>
+      </div>
+      <div style={{textAlign:"center",margin:"4px 0 16px",fontSize:20,color:C.mid}}>+</div>
+      <div style={{marginBottom:24}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{width:28,height:28,borderRadius:"50%",background:C.rorange,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:700}}>3</div>
+          <span style={{fontSize:15,fontWeight:700,color:C.navy}}>Advertising & Services</span>
+          <span style={{fontSize:12,color:C.mid,marginLeft:4}}>Performance media and managed services</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
+          {[{name:"G2 Clicks",color:C.blue,desc:"Self-service PPC ads, 2x conversion vs Google Ads",avail:"All tiers"},{name:"Paid Promotions",color:C.rorange,desc:"Guaranteed ad buyouts with 1/3 impression share",avail:"Pro & Enterprise"},{name:"Review Managed Services",color:C.green,desc:"G2 runs your review strategy end to end",avail:"Pro & Enterprise"},{name:"Custom Event Activation",color:C.yellow,desc:"Turn conferences into review generation machines",avail:"Pro & Enterprise"},{name:"Technical Consulting",color:C.purple,desc:"Custom architecture to make G2 data actionable",avail:"Ent & Commercial"}].map(s=>
+            <div key={s.name} className="card-hover" onClick={()=>{setView("addons");const match=ADDON_PRODUCTS.find(a=>a.name.includes(s.name.split(" ")[0])||a.name.includes(s.name));if(match)setExpandedAddon(match.name);}} style={{borderRadius:8,padding:"14px 16px",background:C.light,borderLeft:`4px solid ${s.color}`}}>
+              <div style={{fontWeight:700,fontSize:13,color:C.navy}}>{s.name}</div><div style={{fontSize:11,color:C.mid,marginTop:4,lineHeight:1.4}}>{s.desc}</div><Pill color={s.color}>{s.avail}</Pill>
+            </div>)}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:24,padding:"16px 20px",background:C.navy,borderRadius:8,marginTop:8}}>
+        {[{stat:"2.6M+",label:"Verified Reviews"},{stat:"160K+",label:"Products & Services"},{stat:"90M+",label:"Annual Buyers"},{stat:"3 Tiers",label:"Base Packages"},{stat:"9+",label:"Add-On Products"}].map((s,i)=>
+          <div key={i} style={{flex:1,textAlign:"center"}}><div style={{color:C.rorange,fontSize:20,fontWeight:700}}>{s.stat}</div><div style={{color:"#7D8FA6",fontSize:11,marginTop:2}}>{s.label}</div></div>)}
+      </div>
+    </div>}
+
+    {/* BASE PACKAGES */}
+    {view==="packages"&&<div>
+      <SectionTitle sub="Each tier builds on the previous one">FY27 Base / Brand Packages</SectionTitle>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${FOUNDATION_TIERS.length},1fr)`,gap:12}}>
+        {FOUNDATION_TIERS.map(t=><div key={t.name} style={{borderRadius:8,overflow:"hidden",border:`2px solid ${t.color}`}}>
+          <div style={{background:t.color,padding:"14px 16px",textAlign:"center"}}><div style={{color:"#fff",fontWeight:700,fontSize:18}}>{t.name}</div><div style={{color:"rgba(255,255,255,.85)",fontSize:13,marginTop:2}}>{t.price}</div></div>
+          <div style={{padding:"12px 14px",fontSize:12,color:C.navy,lineHeight:1.6}}>
+            <div style={{fontWeight:600,marginBottom:6}}>{t.headline}</div>
+            {t.highlights.map((h,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:3}}>
+              <span style={{color:t.color,fontWeight:700,flexShrink:0,marginTop:1}}>{h.startsWith("Everything")?"":h.includes("add-on")?"+":"✓"}</span>
+              <span style={{color:h.startsWith("Everything")?t.color:h.includes("add-on")?C.purple:C.navy,fontWeight:h.startsWith("Everything")?600:400}}>{h}</span>
+            </div>)}
+          </div>
+        </div>)}
+      </div>
+    </div>}
+
+    {/* ADD-ONS */}
+    {view==="addons"&&<div>
+      <SectionTitle sub="Click any product to expand pricing details">Add-On Products & Services</SectionTitle>
+      <input type="text" placeholder="Search products..." value={search} onChange={e=>setSearch(e.target.value)} className="inp" style={{maxWidth:360,marginBottom:16,width:"100%"}}/>
+      {ADDON_PRODUCTS.filter(a=>!search||a.name.toLowerCase().includes(search.toLowerCase())||a.description.toLowerCase().includes(search.toLowerCase())).map(addon=>{
+        const open=expandedAddon===addon.name;
+        return <div key={addon.id} className={`addon-row ${open?"open":""}`} style={{"--accent":addon.color}}>
+          <div className="addon-hdr" onClick={()=>setExpandedAddon(open?null:addon.name)} style={{background:open?addon.tint:"#fff"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:addon.color,flexShrink:0}}/>
+              <div><div style={{fontWeight:700,fontSize:15,color:C.navy}}>{addon.name}</div><div style={{fontSize:12,color:C.mid,marginTop:1}}>{addon.tagline}</div></div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <Pill color={addon.color}>{addon.availability}</Pill>
+              <span style={{fontSize:16,color:C.mid,transform:open?"rotate(180deg)":"none",transition:"transform .2s",display:"inline-block"}}>▾</span>
+            </div>
+          </div>
+          {open&&<div className="addon-body" style={{background:addon.tint}}>
+            <p>{addon.description}</p>
+            <table><thead><tr><th style={{background:addon.color}}>Type</th><th style={{background:addon.color}}>Details</th><th style={{background:addon.color}}>List Price</th></tr></thead>
+            <tbody>{addon.tiers.map((row,ri)=><tr key={ri} style={{background:ri%2===0?"#fff":C.light}}><td style={{color:C.mid,fontWeight:500}}>{row.label}</td><td>{row.detail}</td><td>{row.price}</td></tr>)}</tbody></table>
+            {addon.extras&&<div style={{marginTop:14}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:6}}>{addon.id==="techconsulting"?"Advisory & Build Services Menu":"A La Carte Services (ROM Estimates)"}</div>
+              <div className="extras-grid">{addon.extras.map((e,i)=><div key={i}>{e}</div>)}</div>
+            </div>}
+          </div>}
+        </div>;
+      })}
+    </div>}
+
+    {/* NON-ACV */}
+    {view==="nonavc"&&<div>
+      <SectionTitle sub="These items are billed separately from ACV and are non-discountable unless noted">Non-ACV Add-Ons</SectionTitle>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        {NON_ACV_REF.map((item,i)=><div key={i} style={{background:C.light,borderLeft:`4px solid ${C.mid}`,borderRadius:8,padding:"16px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div><div style={{fontWeight:700,fontSize:14,color:C.navy}}>{item.name}</div><div style={{fontSize:12,color:C.mid,marginTop:4}}>{item.note}</div></div>
+            <div style={{fontWeight:700,fontSize:14,color:C.rorange,whiteSpace:"nowrap",marginLeft:16}}>{item.price}</div>
+          </div>
+        </div>)}
+      </div>
+    </div>}
+  </div>;
+}
+
+/* ================================================================
+   MODE 2: PROPOSAL BUILDER
+   ================================================================ */
+function BuilderMode({pendingLoad, onLoaded}){
+  const [sub,setSub]=useState("products");
+  const [cust,setCust]=useState("");
+  const [rep,setRep]=useState("");
+  const [products,setProducts]=useState([mkProduct("Product 1")]);
+  const [acctItems,setAcctItems]=useState({});
+  const [activeIdx,setActiveIdx]=useState(0);
+
+  /* Proposal persistence state */
+  const [proposalId,setProposalId]=useState(null);
+  const [discOpen,setDiscOpen]=useState({});  // tracks which discount fields are expanded: "base" | addonId
+  const toggleDisc=(key)=>setDiscOpen(prev=>({...prev,[key]:!prev[key]}));
+  const [proposalDisc,setProposalDisc]=useState("");   // proposal-level discount %
+  const [showProposalDisc,setShowProposalDisc]=useState(false);
+  const [proposalName,setProposalName]=useState("");
+  const [saveNote,setSaveNote]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [savedMsg,setSavedMsg]=useState(false);
+  const [showSave,setShowSave]=useState(false);
+  const [showLoad,setShowLoad]=useState(false);
+  const [historyTarget,setHistoryTarget]=useState(null);
+
+  /* Load proposal passed in from Proposals Library */
+  useEffect(()=>{
+    if(!pendingLoad?.proposal)return;
+    (async()=>{
+      const versions=await api.listVersions(pendingLoad.proposal.id);
+      if(versions.length>0){
+        const v=await api.getVersion(versions[0].id);
+        const s=v.snapshot||{};
+        setCust(s.cust||"");setRep(s.rep||"");
+        setProducts(s.products||[mkProduct("Product 1")]);
+        setAcctItems(s.acctItems||{});
+        setProposalDisc(s.proposalDisc||"");
+        setShowProposalDisc(!!s.proposalDisc);
+        setProposalId(pendingLoad.proposal.id);
+        setProposalName(pendingLoad.proposal.name||"");
+      }
+      setSub(pendingLoad.sub||"products");
+      if(onLoaded)onLoaded();
+    })();
+  },[pendingLoad]);
+
+  const tabs=[{id:"products",label:"Products & Rate Cards"},{id:"account",label:"Account-Level Items"},{id:"preview",label:"Proposal Preview"}];
+
+  /* Product helpers */
+  const addProduct=()=>{setProducts(prev=>{const n=[...prev,mkProduct("")];setActiveIdx(n.length-1);return n;});};
+  const removeProduct=idx=>{setProducts(prev=>{if(prev.length<=1)return prev;const n=prev.filter((_,i)=>i!==idx);setActiveIdx(Math.min(activeIdx,n.length-1));return n;});};
+  const updateProd=(idx,fn)=>{setProducts(prev=>prev.map((p,i)=>i===idx?fn(p):p));};
+  const toggleAddon=(pIdx,addonId,on)=>{updateProd(pIdx,p=>{const addons={...p.addons};if(on){addons[addonId]={on:true,tierIdx:0,qty:1,rate:"",disc:""};}else{delete addons[addonId];}return{...p,addons};});};
+  const updateAddon=(pIdx,addonId,patch)=>{updateProd(pIdx,p=>({...p,addons:{...p.addons,[addonId]:{...p.addons[addonId],...patch}}}));};
+
+  /* Account item helpers */
+  const toggleAcct=(id,on)=>{setAcctItems(prev=>{const n={...prev};if(on){n[id]={qty:1,rate:""};}else{delete n[id];}return n;});};
+  const updateAcct=(id,patch)=>{setAcctItems(prev=>({...prev,[id]:{...prev[id],...patch}}));};
+
+  const prod=products[activeIdx];
+
+  /* Compute totals for preview */
+  const computeTotals=()=>{
+    const prodSummaries=products.map(prod=>{
+      const basePkg=BASE_PKGS.find(b=>b.id===prod.basePkg);
+      const listBase=basePkg?basePkg.list:0;
+      const baseRate=pn(prod.baseRate)||listBase;
+      const baseDisc=pn(prod.baseDisc)||0;
+      let prodAcv=baseRate;
+      let prodList=listBase;
+      const addonLines=[];
+      Object.keys(prod.addons).forEach(aid=>{
+        const cat=ADDON_CATALOG.find(a=>a.id===aid);if(!cat)return;
+        const d=prod.addons[aid];const tier=cat.tiers[d.tierIdx||0];
+        const listRate=tier.p;const rate=pn(d.rate)||listRate;const qty=d.qty||1;
+        const total=rate*qty;const listTotal=listRate*qty;
+        const disc=listRate>0?Math.round((1-rate/listRate)*1000)/10:0;
+        prodAcv+=total;prodList+=listTotal;
+        addonLines.push({name:cat.name,tier:tier.l,qty,rate,total,listRate,listTotal,disc,color:cat.color});
+      });
+      return{name:prod.name||"Unnamed Product",basePkg,baseRate,baseDisc,listBase,addonLines,prodAcv,prodList};
+    });
+    const totalAcv=prodSummaries.reduce((s,p)=>s+p.prodAcv,0);
+    const totalList=prodSummaries.reduce((s,p)=>s+p.prodList,0);
+    let totalNonAcv=0;const nonAcvLines=[];
+    Object.keys(acctItems).forEach(id=>{
+      const cat=NONAVC_CATALOG.find(n=>n.id===id);if(!cat)return;
+      const d=acctItems[id];const rate=pn(d.rate)||cat.list;const qty=d.qty||1;const total=rate*qty;
+      totalNonAcv+=total;nonAcvLines.push({name:cat.name,qty,rate,total});
+    });
+    const propDiscPct=pn(proposalDisc);
+    const propDiscAmt=propDiscPct>0?Math.round(totalAcv*propDiscPct/100):0;
+    const finalAcv=totalAcv-propDiscAmt;
+    return{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,finalAcv,grandTotal:finalAcv+totalNonAcv};
+  };
+
+  /* Save proposal */
+  const doSave=async()=>{
+    setSaving(true);
+    const snapshot={cust,rep,products,acctItems,proposalDisc};
+    const totals=computeTotals();
+    const name=proposalName||(cust||"Untitled Proposal");
+    try{
+      let pid=proposalId;
+      if(!pid){
+        const created=await api.createProposal({name,customer:cust,rep,grand_total:totals.grandTotal});
+        pid=created.id;setProposalId(pid);
+      }else{
+        await api.updateProposal(pid,{name,customer:cust,rep,grand_total:totals.grandTotal});
+      }
+      await api.createVersion(pid,{snapshot,notes:saveNote||null});
+      setSaving(false);setShowSave(false);setSaveNote("");
+      setSavedMsg(true);setTimeout(()=>setSavedMsg(false),3000);
+    }catch(e){
+      setSaving(false);alert("Save failed: "+e.message);
+    }
+  };
+
+  /* Export to PowerPoint */
+  const [exporting,setExporting]=useState(false);
+  const doExportPptx=async()=>{
+    setExporting(true);
+    const snapshot={cust,rep,products,acctItems,proposalDisc};
+    try{
+      const r=await fetch("/api/proposals/export-pptx",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(snapshot)
+      });
+      if(!r.ok)throw new Error("Server error "+r.status);
+      const blob=await r.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;
+      a.download=`G2_Proposal_${(cust||"Proposal").replace(/\s+/g,"_")}.pptx`;
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+    }catch(e){alert("Export failed: "+e.message);}
+    setExporting(false);
+  };
+
+  /* Export to Google Slides */
+  const [exportingGS,setExportingGS]=useState(false);
+  const [gsSetupOpen,setGsSetupOpen]=useState(false);
+  const doExportGoogleSlides=async()=>{
+    if(!GOOGLE_CLIENT_ID){setGsSetupOpen(true);return;}
+    setExportingGS(true);
+    const snapshot={cust,rep,products,acctItems,proposalDisc};
+    try{
+      /* Step 1 — get PPTX bytes from server */
+      const pptxRes=await fetch("/api/proposals/export-pptx",{
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snapshot)
+      });
+      if(!pptxRes.ok)throw new Error("PPTX generation failed ("+pptxRes.status+")");
+      const pptxBlob=await pptxRes.blob();
+      /* Step 2 — Google OAuth popup */
+      const token=await _getGoogleToken();
+      /* Step 3 — multipart upload to Drive, auto-convert to Slides */
+      const name=`G2 Proposal \u2014 ${cust||"Proposal"}`;
+      const meta=JSON.stringify({name,mimeType:"application/vnd.google-apps.presentation"});
+      const form=new FormData();
+      form.append("metadata",new Blob([meta],{type:"application/json"}));
+      form.append("file",pptxBlob);
+      const upRes=await fetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
+        {method:"POST",headers:{Authorization:`Bearer ${token}`},body:form}
+      );
+      if(!upRes.ok){const e=await upRes.json();throw new Error(e.error?.message||"Upload failed");}
+      const {webViewLink}=await upRes.json();
+      window.open(webViewLink,"_blank");
+    }catch(e){
+      if(e.message!=="popup_closed_by_user"&&e.message!=="access_denied"){
+        alert("Google Slides export failed:\n"+e.message);
+      }
+    }
+    setExportingGS(false);
+  };
+
+  /* Load a proposal (latest version) */
+  const doLoad=async(p)=>{
+    const versions=await api.listVersions(p.id);
+    if(versions.length>0){
+      const v=await api.getVersion(versions[0].id);
+      const s=v.snapshot;
+      setCust(s.cust||"");setRep(s.rep||"");
+      setProducts(s.products||[mkProduct("Product 1")]);
+      setAcctItems(s.acctItems||{});setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setProposalId(p.id);setProposalName(p.name);
+    }
+    setShowLoad(false);setSub("products");
+  };
+
+  /* Load a specific version */
+  const doLoadVersion=async(p,versionId)=>{
+    const v=await api.getVersion(versionId);
+    if(v){
+      const s=v.snapshot;
+      setCust(s.cust||"");setRep(s.rep||"");
+      setProducts(s.products||[mkProduct("Product 1")]);
+      setAcctItems(s.acctItems||{});setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setProposalId(p.id);setProposalName(p.name);
+    }
+    setHistoryTarget(null);setShowLoad(false);setSub("products");
+  };
+
+  /* New proposal */
+  const doNew=()=>{
+    setProposalId(null);setProposalName("");setCust("");setRep("");
+    setProducts([mkProduct("Product 1")]);setAcctItems({});
+    setProposalDisc("");setShowProposalDisc(false);setSub("products");
+  };
+
+  return <div>
+    {/* Customer/Rep header bar */}
+    <div className="card no-print" style={{padding:"16px 20px",marginBottom:20,display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{flex:1,minWidth:200}}>
+        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>CUSTOMER / VENDOR</div>
+        <input type="text" className="inp inp-name" value={cust} onChange={e=>setCust(e.target.value)} placeholder="e.g. Salesforce" style={{maxWidth:280,fontSize:14,fontWeight:600}}/>
+      </div>
+      <div style={{minWidth:160}}>
+        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>REP</div>
+        <input type="text" className="inp" value={rep} onChange={e=>setRep(e.target.value)} placeholder="Your name" style={{width:180,fontSize:13}}/>
+      </div>
+      {(()=>{const t=computeTotals();return <div style={{display:"flex",alignItems:"center",gap:16}}>
+        {(showProposalDisc||pn(proposalDisc)>0)&&<div style={{textAlign:"center",borderRight:"1px solid #E2E8F0",paddingRight:16}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>TOTAL DISC %</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <input type="number" className="inp" min="0" max="100" autoFocus
+              style={{width:70,textAlign:"center",fontSize:14,fontWeight:700}}
+              value={proposalDisc} placeholder="0"
+              onChange={e=>setProposalDisc(e.target.value)}/>
+            <button onClick={()=>{setShowProposalDisc(false);setProposalDisc("");}}
+              style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#B0BACA",lineHeight:1,padding:"0 2px"}} title="Remove">×</button>
+          </div>
+          {pn(proposalDisc)>0&&<div style={{fontSize:10,color:C.green,fontWeight:600,marginTop:2}}>{fmt(t.propDiscAmt)} off</div>}
+        </div>}
+        <div style={{textAlign:"right",minWidth:160}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:2}}>
+            <div style={{fontSize:10,fontWeight:600,color:C.mid}}>RUNNING TOTAL</div>
+            {!(showProposalDisc||pn(proposalDisc)>0)&&<button onClick={()=>setShowProposalDisc(true)}
+              style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:10,color:C.mid,padding:"1px 6px",whiteSpace:"nowrap"}}>+ disc</button>}
+          </div>
+          {pn(proposalDisc)>0&&<div style={{fontSize:12,color:"#B0BACA",textDecoration:"line-through"}}>{fmt(t.totalAcv)}</div>}
+          <div style={{fontSize:22,fontWeight:800,color:C.rorange}}>{fmt(t.grandTotal)}</div>
+          <div style={{fontSize:11,color:C.mid}}>{products.length} product{products.length>1?"s":""} | ACV {fmt(t.finalAcv)}</div>
+        </div>
+      </div>;})()}
+      {/* Proposal actions */}
+      <div style={{display:"flex",gap:8,alignItems:"center",borderLeft:"1px solid #E2E8F0",paddingLeft:16}}>
+        {proposalId&&<div style={{fontSize:11,color:C.mid,maxWidth:120,lineHeight:1.3}}>
+          <span style={{fontWeight:600,color:C.navy,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{proposalName}</span>
+          <span>Unsaved changes</span>
+        </div>}
+        {savedMsg&&<span style={{fontSize:12,color:C.green,fontWeight:600}}>✓ Saved</span>}
+        <button className="btn btn-sm btn-out" onClick={doNew} title="Start a new blank proposal">New</button>
+        <button className="btn btn-sm btn-out" onClick={()=>setShowLoad(true)}>Load</button>
+        <button className="btn btn-sm btn-sec" onClick={()=>{setProposalName(p=>p||(cust||""));setShowSave(true);}}>
+          {proposalId?"Save Version":"Save"}
+        </button>
+      </div>
+    </div>
+
+    {/* Sub-tabs */}
+    <div style={{display:"flex",gap:2,marginBottom:20}} className="no-print">
+      {tabs.map(t=><button key={t.id} className={`stab ${sub===t.id?"on":""}`} onClick={()=>setSub(t.id)}>{t.label}</button>)}
+    </div>
+
+    {/* PRODUCTS TAB */}
+    {sub==="products"&&prod&&<div>
+      <div style={{marginBottom:16}}>
+        <h2 style={{fontSize:18,fontWeight:700,color:C.navy,marginBottom:4}}>G2 Product Profiles</h2>
+        <p style={{fontSize:13,color:C.mid}}>Add a product for each G2 profile this customer owns. Configure base package and add-ons per product.</p>
+      </div>
+      <div style={{display:"flex",alignItems:"flex-end",flexWrap:"wrap",marginBottom:0}}>
+        {products.map((p,i)=><div key={p.id} className={`ptab ${i===activeIdx?"on":""}`} onClick={()=>setActiveIdx(i)} style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name||"Product "+(i+1)}</span>
+          {products.length>1&&<span onClick={e=>{e.stopPropagation();removeProduct(i);}} style={{color:"#B0BACA",fontSize:14,cursor:"pointer",lineHeight:1}} title="Remove">&times;</span>}
+        </div>)}
+        <button className="btn btn-sm btn-grn" style={{marginLeft:4,marginBottom:2,borderRadius:5}} onClick={addProduct}>+ Add Product</button>
+      </div>
+      <div className="card" style={{borderRadius:"0 10px 10px 10px",overflow:"hidden"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid #E2E8F0",background:"#FAFBFC"}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:4}}>PRODUCT / PROFILE NAME</div>
+          <input type="text" className="inp inp-name" value={prod.name} onChange={e=>updateProd(activeIdx,p=>({...p,name:e.target.value}))} placeholder="e.g. Sales Cloud, Service Cloud" style={{maxWidth:400,fontSize:14,fontWeight:600}}/>
+        </div>
+        <div style={{padding:"12px 20px 4px",borderBottom:"2px solid #F2F4F7"}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>Base Package</div>
+          {BASE_PKGS.map(b=>{const sel=prod.basePkg===b.id;
+            return <div key={b.id} className="row" style={{background:sel?"#E8F9F6":"#fff",cursor:"pointer",borderRadius:sel?6:0}} onClick={()=>updateProd(activeIdx,p=>({...p,basePkg:b.id}))}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${sel?C.green:"#D9DEE6"}`,background:sel?C.green:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>{sel&&<span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}</div>
+                <div><span style={{fontWeight:700,fontSize:14,color:C.navy}}>{b.name}</span><span style={{fontSize:12,color:C.mid,marginLeft:8}}>{b.hl}</span></div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <span style={{fontSize:12,color:C.mid}}>List: {b.list>0?fmt(b.list)+"/yr":"$0"}</span>
+                {sel&&<div style={{display:"flex",alignItems:"center",gap:6}} onClick={e=>e.stopPropagation()}>
+                  {(discOpen["base"]||pn(prod.baseDisc)>0)&&<div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>DISC %</div>
+                    <input type="number" className="inp" min="0" max="100" style={{width:64,textAlign:"center",fontSize:12}}
+                      value={prod.baseDisc||""} placeholder="0" autoFocus={discOpen["base"]&&!pn(prod.baseDisc)}
+                      onChange={e=>{const d=e.target.value;const r=d&&b.list?calcRate(d,b.list):"";updateProd(activeIdx,p=>({...p,baseDisc:d,baseRate:r}));}}/>
+                  </div>}
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>YOUR RATE</div>
+                    <input type="number" className="inp inp-r" value={prod.baseRate}
+                      placeholder={b.list||"0"} style={{width:110}}
+                      onChange={e=>{const r=e.target.value;const d=r&&b.list?calcDisc(r,b.list):"";updateProd(activeIdx,p=>({...p,baseRate:r,baseDisc:d}));}}/>
+                  </div>
+                  {!(discOpen["base"]||pn(prod.baseDisc)>0)
+                    ? <button onClick={()=>toggleDisc("base")} style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:11,color:C.mid,padding:"2px 7px",whiteSpace:"nowrap"}}>+ disc</button>
+                    : pn(prod.baseDisc)>0&&<div style={{fontSize:10,color:"#B0BACA",textDecoration:"line-through"}}>{fmt(b.list)}</div>}
+                </div>}
+              </div>
+            </div>;})}
+        </div>
+        <div style={{padding:"12px 20px 4px"}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>Add-On Products for {prod.name||"this product"}</div>
+          {ADDON_CATALOG.map(addon=>{const data=prod.addons[addon.id];const on=!!data;
+            return <div key={addon.id} style={{borderBottom:"1px solid #F2F4F7",paddingBottom:on?12:0}}>
+              <div className="row" style={{background:on?(addon.tint||"#E8F1FF"):"#fff"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <Toggle on={on} onChange={v=>toggleAddon(activeIdx,addon.id,v)}/>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:addon.color}}/>
+                  <span style={{fontWeight:700,fontSize:13,color:C.navy}}>{addon.name}</span>
+                </div>
+                {on&&(()=>{const tier=addon.tiers[data.tierIdx||0];const rate=pn(data.rate)||tier.p;const qty=data.qty||1;return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{rate>0?fmt(rate*qty):"Custom"}</span>;})()}
+              </div>
+              {on&&<div style={{padding:"6px 20px 6px 64px",background:addon.tint||"#F8FAFC",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+                <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>TIER</div>
+                  <select value={data.tierIdx||0} onChange={e=>updateAddon(activeIdx,addon.id,{tierIdx:parseInt(e.target.value)})} className="inp" style={{minWidth:200,fontSize:12}}>
+                    {addon.tiers.map((t,i)=><option key={i} value={i}>{t.l}{t.p>0?" - "+fmt(t.p):""}</option>)}
+                  </select></div>
+                <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>QTY</div>
+                  <input type="number" className="inp inp-qty" min="1" value={data.qty||1} onChange={e=>updateAddon(activeIdx,addon.id,{qty:Math.max(1,parseInt(e.target.value)||1)})}/></div>
+                <div style={{display:"flex",gap:6,alignItems:"flex-end"}}>
+                  {(discOpen[addon.id]||pn(data.disc)>0)&&<div style={{textAlign:"center"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>DISC %</div>
+                    <input type="number" className="inp" min="0" max="100" style={{width:64,textAlign:"center",fontSize:12}}
+                      value={data.disc||""} placeholder="0" autoFocus={discOpen[addon.id]&&!pn(data.disc)}
+                      onChange={e=>{const d=e.target.value;const listP=addon.tiers[data.tierIdx||0].p;const r=d&&listP?calcRate(d,listP):"";updateAddon(activeIdx,addon.id,{disc:d,rate:r});}}/>
+                  </div>}
+                  <div>
+                    <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>YOUR RATE</div>
+                    <input type="number" className="inp inp-r" style={{width:110}}
+                      value={data.rate||""}
+                      placeholder={addon.tiers[data.tierIdx||0].p||"Custom"}
+                      onChange={e=>{const r=e.target.value;const listP=addon.tiers[data.tierIdx||0].p;const d=r&&listP?calcDisc(r,listP):"";updateAddon(activeIdx,addon.id,{rate:r,disc:d});}}/>
+                  </div>
+                  {!(discOpen[addon.id]||pn(data.disc)>0)
+                    ? <button onClick={()=>toggleDisc(addon.id)} style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:11,color:C.mid,padding:"2px 7px",marginBottom:1,whiteSpace:"nowrap"}}>+ disc</button>
+                    : null}
+                </div>
+              </div>}
+            </div>;})}
+        </div>
+      </div>
+    </div>}
+
+    {/* ACCOUNT TAB */}
+    {sub==="account"&&<div>
+      <div style={{marginBottom:20}}><h2 style={{fontSize:18,fontWeight:700,color:C.navy,marginBottom:4}}>Account-Level Items</h2><p style={{fontSize:13,color:C.mid}}>Non-ACV items billed at the account level, not tied to a specific product profile.</p></div>
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{background:C.mid,padding:"12px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Non-ACV Items</span></div>
+        {NONAVC_CATALOG.map(item=>{const data=acctItems[item.id];const on=!!data;const rate=on?(pn(data.rate)||item.list):item.list;const qty=on?(data.qty||1):0;
+          return <div key={item.id} className="row" style={{background:on?"#F8FAFC":"#fff"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
+              <Toggle on={on} onChange={v=>toggleAcct(item.id,v)}/>
+              <span style={{fontWeight:600,fontSize:13,color:C.navy}}>{item.name}</span>
+              <span style={{fontSize:11,color:C.mid}}>{item.note}</span>
+            </div>
+            {on&&<div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>QTY</div><input type="number" className="inp inp-qty" min="1" value={qty} onChange={e=>updateAcct(item.id,{qty:Math.max(1,parseInt(e.target.value)||1)})}/></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>YOUR RATE</div><input type="number" className="inp inp-r" value={data.rate||""} onChange={e=>updateAcct(item.id,{rate:e.target.value})} placeholder={item.list||"0"}/></div>
+              <span style={{fontWeight:700,fontSize:14,color:C.navy,minWidth:70,textAlign:"right"}}>{rate>0?fmt(rate*qty):"Variable"}</span>
+            </div>}
+          </div>;})}
+      </div>
+    </div>}
+
+    {/* PREVIEW TAB */}
+    {sub==="preview"&&(()=>{
+      const{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,finalAcv,grandTotal}=computeTotals();
+      const today=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+      return <div>
+        <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div><h2 style={{fontSize:18,fontWeight:700,color:C.navy}}>Proposal Preview</h2><p style={{fontSize:13,color:C.mid}}>Print or save as PDF (Ctrl+P / Cmd+P).</p></div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn btn-sec" onClick={()=>{setProposalName(p=>p||(cust||""));setShowSave(true);}}>
+              {proposalId?"Save Version":"Save Proposal"}
+            </button>
+            <button className="btn btn-pri" onClick={()=>window.print()}>Print / Save PDF</button>
+            <button className="btn" onClick={doExportPptx} disabled={exporting}
+              style={{background:exporting?"#ccc":"#5746B2",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontWeight:700,cursor:exporting?"default":"pointer",display:"flex",alignItems:"center",gap:6}}>
+              {exporting?<span>⏳ Generating…</span>:<span>⬇ Export .pptx</span>}
+            </button>
+            <button className="btn" onClick={doExportGoogleSlides} disabled={exportingGS}
+              style={{background:exportingGS?"#ccc":"#1a73e8",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontWeight:700,cursor:exportingGS?"default":"pointer",display:"flex",alignItems:"center",gap:7}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
+                <path d="M6 2h9l5 5v15a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/>
+                <path d="M14 2l6 6h-5a1 1 0 01-1-1V2z" fill="#ffffff" opacity=".6"/>
+                <path d="M8 13h8M8 16h5" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              {exportingGS?<span>⏳ Uploading…</span>:<span>Export to Google Slides</span>}
+            </button>
+          </div>
+        </div>
+        {gsSetupOpen&&<div style={{position:"fixed",inset:0,background:"rgba(6,40,70,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setGsSetupOpen(false)}>
+          <div style={{background:"#fff",borderRadius:14,padding:"36px 40px",maxWidth:520,width:"calc(100% - 48px)",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <h3 style={{fontSize:18,fontWeight:800,color:"#062846"}}>Set up Google Slides export</h3>
+              <button onClick={()=>setGsSetupOpen(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#4D6480",lineHeight:1}}>×</button>
+            </div>
+            <p style={{fontSize:13,color:"#4D6480",lineHeight:1.6,marginBottom:16}}>This feature exports your proposal directly to Google Slides in your Drive. It requires a one-time Google Cloud setup (free):</p>
+            <ol style={{fontSize:13,color:"#062846",lineHeight:2,paddingLeft:20,marginBottom:20}}>
+              <li>Go to <a href="https://console.cloud.google.com" target="_blank" style={{color:"#1a73e8"}}>console.cloud.google.com</a> → create a project</li>
+              <li>Enable <strong>Google Drive API</strong></li>
+              <li>Credentials → <strong>Create OAuth 2.0 Client ID</strong> (type: Web Application)</li>
+              <li>Add Authorized JavaScript origins:<br/><code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>http://localhost:5001</code> and your public tunnel URL</li>
+              <li>Copy the <strong>Client ID</strong> and paste it into <code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>GOOGLE_CLIENT_ID</code> in <code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>g2-proposals.html</code></li>
+            </ol>
+            <p style={{fontSize:12,color:"#7D8FA6",borderTop:"1px solid #E2E8F0",paddingTop:12}}>Once set, clicking this button opens a Google sign-in popup, then creates a Google Slides file in your Drive.</p>
+          </div>
+        </div>}
+        <div className="card" style={{padding:"40px 48px",maxWidth:860,margin:"0 auto"}}>
+          <div style={{borderTop:`4px solid ${C.rorange}`,paddingTop:24,marginBottom:32}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:C.mid,textTransform:"uppercase",letterSpacing:1}}>Proposal</div>
+                <h1 style={{fontSize:28,fontWeight:800,color:C.navy,marginTop:4}}>{cust||"Customer"}</h1>
+                <p style={{fontSize:13,color:C.mid,marginTop:4}}>G2 FY27 Multi-Product Recommendation</p>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:12,color:C.mid}}>{today}</div>
+                <div style={{fontSize:12,color:C.mid,marginTop:2}}>Prepared by: {rep||"G2 Sales"}</div>
+                <div style={{fontSize:11,color:C.mid,marginTop:2}}>Internal Only | Confidential</div>
+              </div>
+            </div>
+          </div>
+          <div style={{background:C.navy,borderRadius:10,padding:"24px 32px",marginBottom:totalList>totalAcv?8:36,display:"flex",justifyContent:"space-around",textAlign:"center"}}>
+            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Total ACV</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{fmt(totalAcv)}</div></div>
+            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
+            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Non-ACV</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{fmt(totalNonAcv)}</div></div>
+            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
+            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Products</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{products.length}</div></div>
+            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
+            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Total Investment</div><div style={{color:C.rorange,fontSize:28,fontWeight:800}}>{fmt(grandTotal)}</div></div>
+          </div>
+          {(totalList>totalAcv||propDiscAmt>0)&&<div style={{background:"#E0FAF6",border:`1px solid ${C.green}`,borderRadius:8,padding:"10px 20px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:14,color:C.green}}>✓</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#1a6b5e"}}>Customer Savings</span>
+              <span style={{fontSize:12,color:"#2a8a76"}}>vs. list price</span>
+            </div>
+            <div style={{textAlign:"right"}}>
+              {(()=>{const totalSavings=(totalList-totalAcv)+propDiscAmt;const listBase=totalList||totalAcv;const pct=listBase>0?Math.round(totalSavings/(listBase)*100):0;
+                return <><span style={{fontWeight:800,fontSize:16,color:"#1a6b5e"}}>{fmt(totalSavings)} off</span>
+                  {pct>0&&<span style={{fontSize:12,color:"#2a8a76",marginLeft:8}}>({pct}% discount)</span>}
+                  <div style={{fontSize:11,color:"#2a8a76",textDecoration:"line-through"}}>{fmt(listBase)} list</div></>;
+              })()}
+            </div>
+          </div>}
+          {prodSummaries.map((ps,idx)=>{const color=ps.basePkg?ps.basePkg.color:C.mid;
+            return <div key={idx} style={{marginBottom:28}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:700}}>{idx+1}</div>
+                <div style={{flex:1}}><div style={{fontWeight:800,fontSize:16,color:C.navy}}>{ps.name}</div><div style={{fontSize:12,color:C.mid}}>Profile {idx+1} of {prodSummaries.length}</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:11,color:C.mid}}>Product ACV</div><div style={{fontWeight:800,fontSize:18,color:C.navy}}>{fmt(ps.prodAcv)}</div></div>
+              </div>
+              {ps.basePkg&&<div className="sline">
+                <div><span style={{fontWeight:700,fontSize:14,color:C.navy}}>{ps.basePkg.name}</span><span className="pill" style={{background:color,marginLeft:8}}>Base</span>
+                  <div style={{fontSize:12,color:C.mid,marginTop:2}}>{ps.basePkg.hl}</div>
+                  {ps.baseDisc>0&&<div style={{fontSize:11,color:C.green,fontWeight:600,marginTop:2}}>{ps.baseDisc}% discount applied</div>}
+                </div>
+                <div style={{textAlign:"right"}}>
+                  {ps.baseDisc>0&&<div style={{fontSize:11,color:"#B0BACA",textDecoration:"line-through"}}>{fmt(ps.listBase)}/yr</div>}
+                  <span style={{fontWeight:700,fontSize:15,color:C.navy}}>{fmt(ps.baseRate)}/yr</span>
+                </div>
+              </div>}
+              {ps.addonLines.map((line,li)=><div key={li} className="sline">
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:6,height:6,borderRadius:"50%",background:line.color}}/><span style={{fontWeight:700,fontSize:13,color:C.navy}}>{line.name}</span></div>
+                  <div style={{fontSize:12,color:C.mid,marginTop:2,marginLeft:14}}>{line.tier}{line.qty>1?` x ${line.qty}`:""}</div>
+                  {line.disc>0&&<div style={{fontSize:11,color:C.green,fontWeight:600,marginTop:2,marginLeft:14}}>{line.disc}% discount applied</div>}
+                </div>
+                <div style={{textAlign:"right"}}>
+                  {line.disc>0&&<div style={{fontSize:11,color:"#B0BACA",textDecoration:"line-through"}}>{line.qty>1?fmt(line.listTotal):fmt(line.listRate)}</div>}
+                  {line.qty>1&&<div style={{fontSize:11,color:C.mid}}>{fmt(line.rate)} x {line.qty}</div>}
+                  <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{line.total>0?fmt(line.total):"Custom"}</span>
+                </div>
+              </div>)}
+              {idx<prodSummaries.length-1&&<div style={{borderBottom:"2px dashed #E2E8F0",marginTop:16}}/>}
+            </div>;})}
+          {nonAcvLines.length>0&&<div style={{marginTop:8,marginBottom:28}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.8,marginBottom:10,borderBottom:`2px solid ${C.mid}`,paddingBottom:6,display:"inline-block"}}>Account-Level Non-ACV Items</div>
+            {nonAcvLines.map((line,i)=><div key={i} className="sline"><div><span style={{fontWeight:600,fontSize:14,color:C.navy}}>{line.name}</span>{line.qty>1&&<span style={{fontSize:12,color:C.mid,marginLeft:8}}>x {line.qty}</span>}</div><span style={{fontWeight:700,fontSize:14,color:C.navy}}>{line.total>0?fmt(line.total):"Variable"}</span></div>)}
+          </div>}
+          {propDiscAmt>0&&<div className="sline" style={{borderTop:`1px solid #E2E8F0`,marginTop:8}}>
+            <div>
+              <span style={{fontWeight:600,fontSize:14,color:C.navy}}>Subtotal ACV</span>
+            </div>
+            <span style={{fontWeight:600,fontSize:14,color:C.navy}}>{fmt(totalAcv)}</span>
+          </div>}
+          {propDiscAmt>0&&<div className="sline">
+            <div>
+              <span style={{fontWeight:700,fontSize:14,color:C.green}}>Proposal Discount ({propDiscPct}%)</span>
+              <div style={{fontSize:12,color:C.mid,marginTop:2}}>Applied to total ACV</div>
+            </div>
+            <span style={{fontWeight:700,fontSize:14,color:C.green}}>−{fmt(propDiscAmt)}</span>
+          </div>}
+          <div style={{borderTop:`3px solid ${C.navy}`,paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:16,fontWeight:700,color:C.navy}}>Total Annual Investment</span>
+            <span style={{fontSize:26,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}</span>
+          </div>
+          {products.length>1&&<div style={{marginTop:16,padding:"12px 16px",background:C.light,borderRadius:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.mid,marginBottom:6}}>ACV BY PRODUCT</div>
+            {prodSummaries.map((ps,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.navy,padding:"4px 0"}}><span>{ps.name}</span><span style={{fontWeight:700}}>{fmt(ps.prodAcv)}</span></div>)}
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.mid,padding:"4px 0",borderTop:"1px solid #E2E8F0",marginTop:4}}><span>Non-ACV</span><span style={{fontWeight:700}}>{fmt(totalNonAcv)}</span></div>
+          </div>}
+          <div style={{marginTop:32,paddingTop:16,borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
+            <span style={{fontSize:10,color:"#B0BACA"}}>G2.com | FY27 Pricing | Internal Only | Confidential</span>
+            <span style={{fontSize:10,color:"#B0BACA"}}>Prepared {today}</span>
+          </div>
+        </div>
+      </div>;
+    })()}
+
+    {/* MODALS */}
+    {showSave&&<SaveModal
+      isNew={!proposalId}
+      proposalName={proposalName}
+      setProposalName={setProposalName}
+      saveNote={saveNote}
+      setSaveNote={setSaveNote}
+      onSave={doSave}
+      onClose={()=>setShowSave(false)}
+      saving={saving}/>}
+
+    {showLoad&&!historyTarget&&<LoadModal
+      onClose={()=>setShowLoad(false)}
+      onLoad={doLoad}
+      onViewHistory={p=>{setHistoryTarget(p);}}/>}
+
+    {historyTarget&&<HistoryModal
+      proposal={historyTarget}
+      onClose={()=>setHistoryTarget(null)}
+      onLoadVersion={doLoadVersion}/>}
+  </div>;
+}
+
+/* ================================================================
+   PROPOSALS LIBRARY — searchable grid of all saved proposals
+   ================================================================ */
+function ProposalsLibrary({onEdit,onView,onNew}){
+  const [proposals,setProposals]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState("");
+  const [exporting,setExporting]=useState({});
+  const [exportingGSLib,setExportingGSLib]=useState({});
+  const [deleteConfirm,setDeleteConfirm]=useState(null); // id pending delete
+
+  useEffect(()=>{
+    api.listProposals().then(data=>{setProposals(data);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
+
+  const filtered=proposals.filter(p=>{
+    if(!search)return true;
+    const q=search.toLowerCase();
+    return (p.customer||"").toLowerCase().includes(q)||(p.rep||"").toLowerCase().includes(q)||(p.name||"").toLowerCase().includes(q);
+  });
+
+  const totalPipeline=proposals.reduce((s,p)=>s+(p.grand_total||0),0);
+
+  const relTime=iso=>{
+    if(!iso)return"";
+    const d=new Date(iso),now=new Date(),diff=(now-d)/1000;
+    if(diff<60)return"just now";
+    if(diff<3600)return Math.floor(diff/60)+"m ago";
+    if(diff<86400)return Math.floor(diff/3600)+"h ago";
+    if(diff<604800)return Math.floor(diff/86400)+"d ago";
+    return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  };
+
+  const accent=total=>total>=50000?C.rorange:total>=20000?C.purple:C.green;
+
+  const doExportLib=async(p)=>{
+    setExporting(prev=>({...prev,[p.id]:true}));
+    try{
+      const vers=await api.listVersions(p.id);
+      if(!vers.length)throw new Error("No saved version — open and save the proposal first.");
+      const v=await api.getVersion(vers[0].id);
+      const r=await fetch("/api/proposals/export-pptx",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v.snapshot)});
+      if(!r.ok)throw new Error("Export failed ("+r.status+")");
+      const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement("a");
+      a.href=url;a.download=`G2_Proposal_${(p.customer||"Proposal").replace(/\s+/g,"_")}.pptx`;
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+    }catch(e){alert("Export failed: "+e.message);}
+    setExporting(prev=>({...prev,[p.id]:false}));
+  };
+
+  const doExportGSLib=async(p)=>{
+    if(!GOOGLE_CLIENT_ID){alert("Google Slides export requires a Google OAuth Client ID.\n\nOpen any proposal → Preview tab → click \"Export to Google Slides\" for setup instructions.");return;}
+    setExportingGSLib(prev=>({...prev,[p.id]:true}));
+    try{
+      const vers=await api.listVersions(p.id);
+      if(!vers.length)throw new Error("No saved version — open and save the proposal first.");
+      const v=await api.getVersion(vers[0].id);
+      const pptxRes=await fetch("/api/proposals/export-pptx",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v.snapshot)});
+      if(!pptxRes.ok)throw new Error("PPTX generation failed");
+      const pptxBlob=await pptxRes.blob();
+      const token=await _getGoogleToken();
+      const name=`G2 Proposal \u2014 ${p.customer||p.name||"Proposal"}`;
+      const form=new FormData();
+      form.append("metadata",new Blob([JSON.stringify({name,mimeType:"application/vnd.google-apps.presentation"})],{type:"application/json"}));
+      form.append("file",pptxBlob);
+      const upRes=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",{method:"POST",headers:{Authorization:`Bearer ${token}`},body:form});
+      if(!upRes.ok){const e=await upRes.json();throw new Error(e.error?.message||"Upload failed");}
+      const{webViewLink}=await upRes.json();
+      window.open(webViewLink,"_blank");
+    }catch(e){if(e.message!=="popup_closed_by_user"&&e.message!=="access_denied")alert("Google Slides export failed:\n"+e.message);}
+    setExportingGSLib(prev=>({...prev,[p.id]:false}));
+  };
+
+  return <div>
+    {/* ── Header ── */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28,flexWrap:"wrap",gap:16}}>
+      <div>
+        <h2 style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:4}}>Proposals</h2>
+        <p style={{fontSize:13,color:C.mid}}>
+          {loading?"Loading…":`${proposals.length} proposal${proposals.length!==1?"s":""}  ·  ${fmt(totalPipeline)} total pipeline`}
+        </p>
+      </div>
+      <button className="btn btn-pri" onClick={onNew} style={{display:"flex",alignItems:"center",gap:6,fontSize:14,padding:"10px 22px"}}>
+        <span style={{fontSize:20,lineHeight:1,marginTop:-1}}>+</span> New Proposal
+      </button>
+    </div>
+
+    {/* ── Search ── */}
+    <div style={{position:"relative",marginBottom:28}}>
+      <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:15,color:C.mid,pointerEvents:"none"}}>🔍</span>
+      <input type="text" className="inp" placeholder="Search by customer, rep, or proposal name…"
+        value={search} onChange={e=>setSearch(e.target.value)}
+        style={{width:"100%",paddingLeft:38,fontSize:14,padding:"10px 14px 10px 38px"}}/>
+    </div>
+
+    {/* ── Content ── */}
+    {loading?(
+      <div style={{textAlign:"center",padding:"80px 0",color:C.mid,fontSize:15}}>
+        <div style={{fontSize:36,marginBottom:12}}>⏳</div>Loading proposals…
+      </div>
+    ):filtered.length===0?(
+      <div style={{textAlign:"center",padding:"80px 0"}}>
+        <div style={{fontSize:52,marginBottom:16}}>{search?"🔍":"📋"}</div>
+        <div style={{fontSize:20,fontWeight:700,color:C.navy,marginBottom:8}}>
+          {search?"No proposals match your search":"No proposals saved yet"}
+        </div>
+        <p style={{fontSize:14,color:C.mid,marginBottom:28,maxWidth:360,margin:"0 auto 28px"}}>
+          {search?"Try a different search term":"Build your first proposal and save it to see it here."}
+        </p>
+        {!search&&<button className="btn btn-pri" style={{fontSize:14,padding:"11px 28px"}} onClick={onNew}>
+          Create your first proposal
+        </button>}
+      </div>
+    ):(
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))",gap:20}}>
+        {filtered.map(p=>{
+          const ac=accent(p.grand_total||0);
+          const isExp=exporting[p.id],isExpGS=exportingGSLib[p.id];
+          return <div key={p.id} className="card card-hover" style={{overflow:"hidden",display:"flex",flexDirection:"column",transition:"transform .15s,box-shadow .15s"}}>
+            {/* colour bar */}
+            <div style={{height:5,background:ac,flexShrink:0}}/>
+            {/* body */}
+            <div style={{padding:"20px 22px 16px",flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:14}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:18,fontWeight:800,color:C.navy,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={p.customer||p.name}>
+                    {p.customer||p.name||"Untitled Proposal"}
+                  </div>
+                  {p.name&&p.customer&&p.name!==p.customer&&
+                    <div style={{fontSize:11,color:C.mid,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>}
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:21,fontWeight:800,color:ac,lineHeight:1.1}}>{fmt(p.grand_total||0)}</div>
+                  <div style={{fontSize:10,color:C.mid,fontWeight:600,letterSpacing:.5}}>ACV</div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                {p.rep&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.mid}}>
+                  <span style={{width:14,textAlign:"center",flexShrink:0}}>👤</span><span>{p.rep}</span>
+                </div>}
+                <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.mid}}>
+                  <span style={{width:14,textAlign:"center",flexShrink:0}}>🕐</span>
+                  <span>Updated {relTime(p.updated_at)}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.mid}}>
+                  <span style={{width:14,textAlign:"center",flexShrink:0}}>📌</span>
+                  <span>{p.version_count||0} version{(p.version_count||0)!==1?"s":""} saved</span>
+                </div>
+              </div>
+            </div>
+            {/* actions */}
+            <div style={{padding:"12px 16px",borderTop:"1px solid #E2E8F0",background:"#FAFBFC",display:"flex",gap:7,alignItems:"center"}}>
+              <button className="btn btn-sm btn-sec" style={{flex:"1 1 auto"}} onClick={()=>onEdit(p)}>Edit</button>
+              <button className="btn btn-sm btn-out" style={{flex:"1 1 auto"}} onClick={()=>onView(p)}>Preview</button>
+              <button title="Export PowerPoint" disabled={isExp} onClick={()=>doExportLib(p)}
+                style={{background:isExp?"#eee":"#5746B2",color:isExp?"#999":"#fff",border:"none",borderRadius:5,padding:"6px 10px",fontSize:13,fontWeight:700,cursor:isExp?"default":"pointer",flexShrink:0}}>
+                {isExp?"…":"⬇"}
+              </button>
+              <button title="Export to Google Slides" disabled={isExpGS} onClick={()=>doExportGSLib(p)}
+                style={{background:isExpGS?"#eee":"#1a73e8",color:isExpGS?"#999":"#fff",border:"none",borderRadius:5,padding:"6px 9px",fontSize:12,fontWeight:700,cursor:isExpGS?"default":"pointer",flexShrink:0,display:"flex",alignItems:"center",gap:4}}>
+                {isExpGS?"…":<>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 2h9l5 5v15a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/>
+                    <path d="M14 2l6 6h-5a1 1 0 01-1-1V2z" fill="#fff" opacity=".5"/>
+                  </svg>
+                  Slides
+                </>}
+              </button>
+            </div>
+          </div>;
+        })}
+      </div>
+    )}
+  </div>;
+}
+
+/* ================================================================
+   MAIN APP WITH MODE SWITCH + LOGIN GATE
+   ================================================================ */
+function App(){
+  const [authed,setAuthed]=useState(()=>!!sessionStorage.getItem("g2auth"));
+  const [mode,setMode]=useState("proposals");
+  const [pendingLoad,setPendingLoad]=useState(null);
+
+  if(!authed)return <LoginGate onAuth={()=>setAuthed(true)}/>;
+
+  const goEdit=(p)=>{setPendingLoad({proposal:p,sub:"products"});setMode("builder");};
+  const goView=(p)=>{setPendingLoad({proposal:p,sub:"preview"});setMode("builder");};
+  const goNew=()=>{setPendingLoad(null);setMode("builder");};
+
+  return <div style={{minHeight:"100vh",background:C.light}}>
+    <div style={{background:C.navy,padding:"20px 0 20px"}} className="no-print">
+      <div className="ctr">
+        <div style={{borderTop:`3px solid ${C.rorange}`,marginBottom:16}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
+          <div>
+            <h1 style={{color:"#fff",fontSize:24,fontWeight:700}}>G2 Product Suite & Proposal Builder</h1>
+            <p style={{color:C.green,fontSize:12,marginTop:4,fontWeight:500}}>FY27 Enterprise Offerings | Internal Only</p>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div className="mode-bar">
+              <button className={`mode-btn ${mode==="proposals"?"on":""}`} onClick={()=>setMode("proposals")}>📋 Proposals</button>
+              <button className={`mode-btn ${mode==="builder"?"on":""}`} onClick={goNew}>+ New Proposal</button>
+              <button className={`mode-btn ${mode==="suite"?"on":""}`} onClick={()=>setMode("suite")}>Product Reference</button>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>{sessionStorage.removeItem("g2auth");setAuthed(false);}}>Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="ctr" style={{paddingTop:28,paddingBottom:48}}>
+      {mode==="proposals"&&<ProposalsLibrary onEdit={goEdit} onView={goView} onNew={goNew}/>}
+      {mode==="suite"&&<SuiteMode/>}
+      {mode==="builder"&&<BuilderMode pendingLoad={pendingLoad} onLoaded={()=>setPendingLoad(null)}/>}
+    </div>
+    <div style={{background:C.navy,padding:"10px 0"}}><div className="ctr" style={{display:"flex",justifyContent:"space-between"}}>
+      <span style={{color:"#7D8FA6",fontSize:10}}>G2 Product Suite & Proposal Builder | FY27 | Source: Comprehensive Pricing & Packaging Doc, Event Services Menu, Partnership Deck, Technical Consulting Deck</span>
+      <span style={{color:"#7D8FA6",fontSize:10}}>g2.com | Internal Only</span>
+    </div></div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+</script>
+</body>
+</html>
