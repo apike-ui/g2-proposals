@@ -1109,7 +1109,7 @@ function BuilderMode({pendingLoad, onLoaded}){
                     <td style={{padding:"7px 10px",color:C.navy}}>
                       {ps.basePkg?<span className="pill" style={{background:ps.basePkg.color,fontSize:10}}>{ps.basePkg.name}</span>:<span style={{color:C.mid}}>—</span>}
                     </td>
-                    <td style={{padding:"7px 10px",color:MID_TEXT}}>
+                    <td style={{padding:"7px 10px",color:C.mid}}>
                       {ps.addonLines.length>0
                         ?<div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                           {ps.addonLines.map((a,j)=><span key={j} style={{background:a.color+"18",color:a.color,fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:10,whiteSpace:"nowrap"}}>{a.name}{a.qty>1?` x${a.qty}`:""}</span>)}
