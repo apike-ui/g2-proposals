@@ -1,32 +1,48 @@
 """
 G2 Proposal Builder — PPTX generator.
-Produces a 5-slide, 16:9 G2-branded PowerPoint deck from a proposal data dict.
+Produces a professional, G2-branded 16:9 PowerPoint deck from a proposal data dict.
+Optimised for Google Slides import fidelity.
 """
 
 import io
+import os
 from datetime import date
 
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
-from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
-# ── Brand colours ────────────────────────────────────────────────────
-NAVY   = RGBColor(0x06, 0x28, 0x46)
-ORANGE = RGBColor(0xFF, 0x49, 0x2C)
-TEAL   = RGBColor(0x27, 0xD3, 0xBC)
-PURPLE = RGBColor(0x57, 0x46, 0xB2)
-BLUE   = RGBColor(0x00, 0x73, 0xF5)
-YELLOW = RGBColor(0xFF, 0xC8, 0x00)
-WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
-LIGHT  = RGBColor(0xF2, 0xF4, 0xF7)
-MID    = RGBColor(0x4D, 0x64, 0x80)
-LGREY  = RGBColor(0xE2, 0xE8, 0xF0)
+# ── Brand colours (official G2 Brand Book) ──────────────────────────
+RORANGE = RGBColor(0xFF, 0x49, 0x2C)
+NAVY    = RGBColor(0x06, 0x28, 0x46)
+GREEN   = RGBColor(0x27, 0xD3, 0xBC)
+BLUE    = RGBColor(0x00, 0x73, 0xF5)
+PURPLE  = RGBColor(0x57, 0x46, 0xB2)
+YELLOW  = RGBColor(0xFF, 0xC8, 0x00)
+WHITE   = RGBColor(0xFF, 0xFF, 0xFF)
+BLACK   = RGBColor(0x00, 0x00, 0x00)
+
+# Extended tones
+LIGHT_BG     = RGBColor(0xF2, 0xF4, 0xF7)
+BORDER_GREY  = RGBColor(0xD9, 0xDE, 0xE6)
+MID_TEXT     = RGBColor(0x4D, 0x64, 0x80)
+NAVY_DARK    = RGBColor(0x04, 0x1D, 0x35)
+RORANGE_LIGHT = RGBColor(0xFF, 0xEA, 0xE7)
+GREEN_LIGHT  = RGBColor(0xE0, 0xFA, 0xF6)
+PURPLE_LIGHT = RGBColor(0xED, 0xEA, 0xF9)
+BLUE_LIGHT   = RGBColor(0xE0, 0xEE, 0xFF)
 
 # Slide dimensions — widescreen 16:9
 W = Inches(13.333)
 H = Inches(7.5)
+
+# Font name — Figtree (falls back gracefully in Google Slides)
+FONT = "Figtree"
+
+# Assets directory
+_HERE = os.path.dirname(os.path.abspath(__file__))
+ASSETS = os.path.join(_HERE, "assets")
 
 # Base package list prices per year
 BASE_PRICES = {
@@ -36,96 +52,80 @@ BASE_PRICES = {
 }
 
 
-# ── Low-level helpers ────────────────────────────────────────────────
+# ── Low-level helpers ───────────────────────────────────────────────
 
-def _rgb(r: RGBColor):
-    """Return (r,g,b) tuple from RGBColor."""
-    return r[0], r[1], r[2]
-
-
-def add_rect(slide, x, y, w, h, fill: RGBColor, alpha=None):
-    """Add a filled rectangle shape with no border."""
-    from pptx.util import Emu
-    shape = slide.shapes.add_shape(
-        1,  # MSO_SHAPE_TYPE.RECTANGLE
-        Inches(x), Inches(y), Inches(w), Inches(h)
-    )
-    shape.line.fill.background()  # no border
-    fill_fmt = shape.fill
-    fill_fmt.solid()
-    fill_fmt.fore_color.rgb = fill
-    if alpha is not None:
-        fill_fmt.fore_color.theme_color  # touch to materialise
-    return shape
-
-
-def add_rounded_rect(slide, x, y, w, h, fill: RGBColor, radius_pt=8):
-    """Add a rounded rectangle (MSO_SHAPE freeform fallback via auto-shape 5)."""
-    from pptx.oxml.ns import qn
-    from lxml import etree
-    shape = slide.shapes.add_shape(
-        5,  # rounded rectangle
-        Inches(x), Inches(y), Inches(w), Inches(h)
-    )
+def _rect(slide, x, y, w, h, fill):
+    """Add a filled rectangle with no border."""
+    shape = slide.shapes.add_shape(1, Inches(x), Inches(y), Inches(w), Inches(h))
     shape.line.fill.background()
     shape.fill.solid()
     shape.fill.fore_color.rgb = fill
-    # set corner radius
-    adj = shape.shape_element.find(qn('p:spPr') + '/' + qn('a:prstGeom') + '/' + qn('a:avLst') + '/' + qn('a:gd'))
-    if adj is not None:
-        # radius in EMUs as proportion of 100000
-        adj.set('fmla', f'val {min(int(radius_pt * 100), 50000)}')
     return shape
 
 
-def add_textbox(slide, x, y, w, h, text,
-                size=12, bold=False, color: RGBColor = None,
-                align=PP_ALIGN.LEFT, italic=False, wrap=True):
-    """Add a text box and return the shape."""
+def _text(slide, x, y, w, h, text, size=12, bold=False, color=NAVY,
+          align=PP_ALIGN.LEFT, italic=False, wrap=True, font=FONT,
+          anchor=MSO_ANCHOR.TOP):
+    """Add a text box with a single run."""
     txBox = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = txBox.text_frame
     tf.word_wrap = wrap
+    tf.auto_size = None
+    try:
+        tf.paragraphs[0].space_before = Pt(0)
+        tf.paragraphs[0].space_after = Pt(0)
+    except Exception:
+        pass
     p = tf.paragraphs[0]
     p.alignment = align
     run = p.add_run()
-    run.text = text
+    run.text = str(text)
     run.font.size = Pt(size)
     run.font.bold = bold
     run.font.italic = italic
-    if color:
-        run.font.color.rgb = color
+    run.font.name = font
+    run.font.color.rgb = color
     return txBox
 
 
-def add_multiline_textbox(slide, x, y, w, h, lines,
-                          size=12, bold=False, color: RGBColor = None,
-                          align=PP_ALIGN.LEFT, line_space_pt=None):
-    """Add a textbox with multiple paragraphs from a list of strings."""
+def _multitext(slide, x, y, w, h, lines, size=12, bold=False, color=NAVY,
+               align=PP_ALIGN.LEFT, spacing=None, font=FONT):
+    """Text box with multiple paragraphs."""
     txBox = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = txBox.text_frame
     tf.word_wrap = True
     for i, line in enumerate(lines):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.alignment = align
+        if spacing:
+            p.space_after = Pt(spacing)
         run = p.add_run()
-        run.text = line
+        run.text = str(line)
         run.font.size = Pt(size)
         run.font.bold = bold
-        if color:
-            run.font.color.rgb = color
+        run.font.name = font
+        run.font.color.rgb = color
     return txBox
 
 
+def _logo(slide, x, y, height, variant="white"):
+    """Insert G2 logo. variant: 'white' or 'red'."""
+    fname = f"G2Logo-{'White' if variant == 'white' else 'Red'}.png"
+    path = os.path.join(ASSETS, fname)
+    if os.path.exists(path):
+        slide.shapes.add_picture(path, Inches(x), Inches(y),
+                                 height=Inches(height))
+
+
+def _accent_bar(slide, x, y, w, thickness=0.05):
+    """Thin accent bar in Rorange."""
+    _rect(slide, x, y, w, thickness, RORANGE)
+
+
 def fmt_money(val):
-    """Format a number as $X,XXX or $X,XXX,XXX."""
     try:
         v = float(val)
-        if v == int(v):
-            return f"${int(v):,}"
-        return f"${v:,.0f}"
+        return f"${int(v):,}" if v == int(v) else f"${v:,.0f}"
     except Exception:
         return str(val)
 
@@ -137,25 +137,14 @@ def fmt_pct(val):
         return str(val)
 
 
-# ── Totals calculation ───────────────────────────────────────────────
+# ── Totals calculation ──────────────────────────────────────────────
 
 def compute_totals(data: dict) -> dict:
-    """
-    Compute pricing totals from the proposal data dict.
-
-    Expected data shape:
-      data["products"]    — list of product dicts:
-          { "name": str, "basePkg": "free"|"professional"|"enterprise",
-            "baseRate": number (override, or 0/None to use list price),
-            "addons": { "addonName": price_number, ... } }
-      data["acctItems"]   — dict of account-level line items { label: price }
-      data["proposalDisc"]— optional proposal-level discount % (0-100)
-    """
     products = data.get("products") or []
     acct_items = data.get("acctItems") or {}
     disc_pct = float(data.get("proposalDisc") or 0)
 
-    line_items = []   # (label, list_price, net_price)
+    line_items = []
     total_list = 0.0
     total_net = 0.0
     prod_summaries = []
@@ -164,12 +153,8 @@ def compute_totals(data: dict) -> dict:
         name = prod.get("name") or "Product"
         pkg = (prod.get("basePkg") or "free").lower()
         list_base = BASE_PRICES.get(pkg, 0)
-        # If rep supplied a baseRate override, use it; else use list
         base_rate = prod.get("baseRate")
-        if base_rate is not None and float(base_rate) > 0:
-            net_base = float(base_rate)
-        else:
-            net_base = list_base
+        net_base = float(base_rate) if base_rate and float(base_rate) > 0 else list_base
 
         prod_list = list_base
         prod_net = net_base
@@ -178,10 +163,7 @@ def compute_totals(data: dict) -> dict:
         addons = prod.get("addons") or {}
         if isinstance(addons, dict):
             for addon_name, addon_price in addons.items():
-                try:
-                    ap = float(addon_price)
-                except Exception:
-                    ap = 0.0
+                ap = float(addon_price) if addon_price else 0.0
                 prod_list += ap
                 prod_net += ap
                 line_items.append((f"  + {addon_name}", ap, ap))
@@ -191,41 +173,29 @@ def compute_totals(data: dict) -> dict:
                           (f"{name} ({pkg.title()} pkg)", list_base, net_base))
         total_list += prod_list
         total_net += prod_net
-
         prod_summaries.append({
-            "name": name,
-            "pkg": pkg,
-            "list_base": list_base,
-            "net_base": net_base,
-            "addons": addon_lines,
-            "prod_list": prod_list,
-            "prod_net": prod_net,
+            "name": name, "pkg": pkg, "list_base": list_base,
+            "net_base": net_base, "addons": addon_lines,
+            "prod_list": prod_list, "prod_net": prod_net,
         })
 
-    # Account-level items
     for label, price in acct_items.items():
-        try:
-            ap = float(price)
-        except Exception:
-            ap = 0.0
+        ap = float(price) if price else 0.0
         line_items.append((label, ap, ap))
         total_list += ap
         total_net += ap
 
-    # Proposal discount
     discount_amount = 0.0
     if disc_pct > 0:
         discount_amount = total_net * (disc_pct / 100.0)
         total_net -= discount_amount
         line_items.append((f"Proposal Discount ({disc_pct:.1f}%)", 0, -discount_amount))
 
-    total_savings = total_list - total_net
-
     return {
         "line_items": line_items,
         "total_list": total_list,
         "total_net": total_net,
-        "total_savings": total_savings,
+        "total_savings": total_list - total_net,
         "discount_amount": discount_amount,
         "disc_pct": disc_pct,
         "num_products": len(products),
@@ -233,457 +203,468 @@ def compute_totals(data: dict) -> dict:
     }
 
 
-# ── Slide builders ───────────────────────────────────────────────────
+# ── Shared footer ───────────────────────────────────────────────────
 
-def slide_cover(prs: Presentation, data: dict):
-    """Slide 1: Navy cover with G2 logo badge, customer name, rep, date."""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
+def _footer(slide, page_num=None, confidential=True):
+    """Consistent footer bar across all content slides."""
+    _rect(slide, 0, 7.08, 13.333, 0.42, NAVY)
+    _text(slide, 0.55, 7.13, 5, 0.3, "g2.com", size=9, bold=True,
+          color=WHITE, align=PP_ALIGN.LEFT)
+    right_text = "Confidential" if confidential else ""
+    if page_num:
+        right_text = f"{right_text}  |  " if right_text else ""
+        right_text += str(page_num)
+    _text(slide, 7.5, 7.13, 5.3, 0.3, right_text, size=9,
+          color=BORDER_GREY, align=PP_ALIGN.RIGHT)
+    _logo(slide, 12.2, 7.12, 0.28, variant="white")
+
+
+# ── Slide 1: Cover ──────────────────────────────────────────────────
+
+def slide_cover(prs, data):
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
 
     # Full navy background
-    add_rect(slide, 0, 0, 13.333, 7.5, NAVY)
+    _rect(slide, 0, 0, 13.333, 7.5, NAVY)
 
-    # Orange accent bar at bottom
-    add_rect(slide, 0, 6.9, 13.333, 0.6, ORANGE)
+    # Rorange accent bar — left edge
+    _rect(slide, 0, 0, 0.08, 7.5, RORANGE)
 
-    # Subtle teal decorative stripe left edge
-    add_rect(slide, 0, 0, 0.12, 7.5, TEAL)
+    # G2 logo top-right
+    _logo(slide, 11.5, 0.4, 0.65, variant="white")
 
-    # G2 logo badge — orange rounded rect top-left area
-    logo_bg = add_rect(slide, 0.55, 0.45, 1.4, 1.1, ORANGE)
-    logo_bg.line.fill.background()
-    add_textbox(slide, 0.55, 0.45, 1.4, 1.1, "G2",
-                size=42, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    # "PROPOSAL" label
+    _text(slide, 0.7, 0.5, 4, 0.35, "PROPOSAL", size=13, bold=True,
+          color=RORANGE, align=PP_ALIGN.LEFT)
 
-    # "PROPOSAL" tag beside logo
-    add_textbox(slide, 2.15, 0.55, 3.0, 0.4, "PROPOSAL",
-                size=11, bold=True, color=ORANGE, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 2.15, 0.88, 5.5, 0.35, "Custom Investment Summary",
-                size=13, bold=False, color=LGREY, align=PP_ALIGN.LEFT)
-
-    # Customer name — large centred
+    # Customer name — hero headline
     cust = data.get("cust") or data.get("customer") or "Your Company"
-    add_textbox(slide, 0.55, 2.0, 12.2, 1.5, cust,
-                size=52, bold=True, color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
+    _text(slide, 0.7, 1.4, 11.5, 1.8, cust, size=48, bold=True,
+          color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
 
-    # Divider line
-    add_rect(slide, 0.55, 3.65, 6.0, 0.04, TEAL)
+    # Accent bar under name
+    _accent_bar(slide, 0.7, 3.35, 4.5)
 
     # Subtitle
-    add_textbox(slide, 0.55, 3.85, 9.0, 0.5,
-                "Powered by G2's buyer intelligence platform",
-                size=15, bold=False, color=LGREY, align=PP_ALIGN.LEFT)
+    _text(slide, 0.7, 3.65, 9, 0.5,
+          "Custom Investment Summary  |  G2 Buyer Intelligence Platform",
+          size=16, color=BORDER_GREY, align=PP_ALIGN.LEFT)
 
-    # Rep name and date block
+    # Rep + date
     rep = data.get("rep") or ""
     today = data.get("date") or date.today().strftime("%B %d, %Y")
+    info_y = 4.4
     if rep:
-        add_textbox(slide, 0.55, 4.55, 5.0, 0.4, f"Prepared by: {rep}",
-                    size=12, bold=False, color=MID, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 0.55, 4.95, 5.0, 0.4, f"Date: {today}",
-                size=12, bold=False, color=MID, align=PP_ALIGN.LEFT)
+        _text(slide, 0.7, info_y, 6, 0.35, f"Prepared by  {rep}",
+              size=13, color=MID_TEXT, align=PP_ALIGN.LEFT)
+        info_y += 0.4
+    _text(slide, 0.7, info_y, 6, 0.35, today,
+          size=13, color=MID_TEXT, align=PP_ALIGN.LEFT)
 
-    # Right-side decorative stat callout
-    add_rect(slide, 9.5, 1.8, 3.3, 1.1, RGBColor(0x0A, 0x3A, 0x5E))
-    add_textbox(slide, 9.5, 1.85, 3.3, 0.45, "90M+",
-                size=26, bold=True, color=ORANGE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, 9.5, 2.25, 3.3, 0.5, "buyer interactions tracked annually",
-                size=10, bold=False, color=LGREY, align=PP_ALIGN.CENTER, wrap=True)
-
-    add_rect(slide, 9.5, 3.1, 3.3, 1.1, RGBColor(0x0A, 0x3A, 0x5E))
-    add_textbox(slide, 9.5, 3.15, 3.3, 0.45, "#1",
-                size=26, bold=True, color=TEAL, align=PP_ALIGN.CENTER)
-    add_textbox(slide, 9.5, 3.55, 3.3, 0.5, "software marketplace for buyers",
-                size=10, bold=False, color=LGREY, align=PP_ALIGN.CENTER, wrap=True)
-
-    add_rect(slide, 9.5, 4.4, 3.3, 1.1, RGBColor(0x0A, 0x3A, 0x5E))
-    add_textbox(slide, 9.5, 4.45, 3.3, 0.45, "2.5M+",
-                size=26, bold=True, color=YELLOW, align=PP_ALIGN.CENTER)
-    add_textbox(slide, 9.5, 4.85, 3.3, 0.5, "verified software reviews",
-                size=10, bold=False, color=LGREY, align=PP_ALIGN.CENTER, wrap=True)
-
-    # Bottom bar text
-    add_textbox(slide, 0.4, 6.92, 12.5, 0.4,
-                "Confidential — prepared exclusively for " + cust,
-                size=9, bold=False, color=WHITE, align=PP_ALIGN.CENTER)
-
-
-def slide_summary(prs: Presentation, data: dict, totals: dict):
-    """Slide 2: Investment Summary with 4 stat cards."""
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-
-    # White background
-    add_rect(slide, 0, 0, 13.333, 7.5, WHITE)
-
-    # Navy header bar
-    add_rect(slide, 0, 0, 13.333, 1.35, NAVY)
-    add_textbox(slide, 0.5, 0.2, 10.0, 0.6, "Investment Summary",
-                size=28, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-    cust = data.get("cust") or data.get("customer") or ""
-    add_textbox(slide, 0.5, 0.82, 10.0, 0.38, cust,
-                size=14, bold=False, color=LGREY, align=PP_ALIGN.LEFT)
-
-    # Orange accent strip
-    add_rect(slide, 0, 1.35, 13.333, 0.06, ORANGE)
-
-    # ── 4 stat cards ─────────────────────────────────────────────────
-    # Card positions: 4 cards in a row, with spacing
-    card_w = 2.8
-    card_h = 2.0
-    card_y = 1.8
-    gap = 0.28
-    start_x = (13.333 - (4 * card_w + 3 * gap)) / 2
-
+    # Right-side proof point cards
+    card_x = 9.0
+    card_w = 3.8
+    card_h = 0.95
     cards = [
-        ("Total ACV",        fmt_money(totals["total_net"]),    NAVY,   WHITE),
-        ("List Price",       fmt_money(totals["total_list"]),   LGREY,  NAVY),
-        ("# Products",       str(totals["num_products"]),       TEAL,   WHITE),
-        ("Total Savings",    fmt_money(totals["total_savings"]), ORANGE, WHITE),
+        ("90M+",  "annual buyer interactions", RORANGE),
+        ("#1",    "software marketplace", GREEN),
+        ("2.6M+", "verified reviews", YELLOW),
+        ("160K+", "products & services", BLUE),
     ]
+    for i, (stat, desc, accent) in enumerate(cards):
+        cy = 1.4 + i * 1.15
+        _rect(slide, card_x, cy, card_w, card_h, NAVY_DARK)
+        _rect(slide, card_x, cy, 0.06, card_h, accent)
+        _text(slide, card_x + 0.25, cy + 0.1, 1.6, 0.5, stat,
+              size=22, bold=True, color=accent, align=PP_ALIGN.LEFT)
+        _text(slide, card_x + 1.9, cy + 0.18, 1.8, 0.55, desc,
+              size=10, color=BORDER_GREY, align=PP_ALIGN.LEFT, wrap=True)
 
-    for i, (label, value, header_color, header_text_color) in enumerate(cards):
+    # Bottom bar
+    _rect(slide, 0, 6.95, 13.333, 0.55, RORANGE)
+    _text(slide, 0.7, 7.0, 8, 0.4,
+          f"Prepared exclusively for {cust}",
+          size=10, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
+    _logo(slide, 12.1, 7.0, 0.38, variant="white")
+
+
+# ── Slide 2: Investment Summary ─────────────────────────────────────
+
+def slide_summary(prs, data, totals):
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _rect(slide, 0, 0, 13.333, 7.5, WHITE)
+
+    # Header
+    _rect(slide, 0, 0, 13.333, 1.25, NAVY)
+    _rect(slide, 0, 0, 0.08, 1.25, RORANGE)
+    _logo(slide, 12.1, 0.28, 0.55, variant="white")
+    _text(slide, 0.7, 0.15, 8, 0.55, "Investment Summary",
+          size=28, bold=True, color=WHITE)
+    cust = data.get("cust") or data.get("customer") or ""
+    _text(slide, 0.7, 0.72, 8, 0.35, cust, size=13, color=BORDER_GREY)
+    _accent_bar(slide, 0, 1.25, 13.333, 0.05)
+
+    # Stat cards row
+    card_data = [
+        ("Total ACV",     fmt_money(totals["total_net"]),    RORANGE, WHITE),
+        ("List Price",    fmt_money(totals["total_list"]),   NAVY,    WHITE),
+        ("Products",      str(totals["num_products"]),       PURPLE,  WHITE),
+        ("Your Savings",  fmt_money(totals["total_savings"]),GREEN,   WHITE),
+    ]
+    card_w = 2.75
+    gap = 0.35
+    total_w = 4 * card_w + 3 * gap
+    start_x = (13.333 - total_w) / 2
+    card_y = 1.65
+
+    for i, (label, value, bg, text_c) in enumerate(card_data):
         cx = start_x + i * (card_w + gap)
-        # Card shadow/border
-        add_rect(slide, cx + 0.04, card_y + 0.04, card_w, card_h, LGREY)
-        # Card body
-        card_bg = add_rect(slide, cx, card_y, card_w, card_h, WHITE)
-        # Card header
-        add_rect(slide, cx, card_y, card_w, 0.55, header_color)
-        add_textbox(slide, cx, card_y + 0.08, card_w, 0.42, label,
-                    size=12, bold=True, color=header_text_color, align=PP_ALIGN.CENTER)
-        # Card value
-        add_textbox(slide, cx, card_y + 0.65, card_w, 1.1, value,
-                    size=30, bold=True, color=NAVY, align=PP_ALIGN.CENTER)
 
-    # ── Summary breakdown ─────────────────────────────────────────────
-    row_y = 4.25
-    add_rect(slide, 0.5, row_y, 12.333, 0.04, LGREY)
-    row_y += 0.18
+        # Card background
+        _rect(slide, cx, card_y, card_w, 1.85, bg)
 
-    add_textbox(slide, 0.5, row_y, 12.0, 0.4,
-                "What's included in your G2 investment:",
-                size=13, bold=True, color=NAVY, align=PP_ALIGN.LEFT)
-    row_y += 0.5
+        # Label
+        _text(slide, cx, card_y + 0.2, card_w, 0.3, label,
+              size=11, bold=True, color=text_c, align=PP_ALIGN.CENTER)
+
+        # Value
+        _text(slide, cx, card_y + 0.65, card_w, 0.8, value,
+              size=32, bold=True, color=text_c, align=PP_ALIGN.CENTER)
+
+        # Thin bottom accent
+        if i == 0:
+            _rect(slide, cx, card_y + 1.75, card_w, 0.1, WHITE)
+
+    # Product breakdown section
+    _text(slide, 0.7, 3.85, 12, 0.4, "What's Included",
+          size=18, bold=True, color=NAVY)
+    _accent_bar(slide, 0.7, 4.28, 2.5)
 
     prod_summaries = totals.get("prod_summaries") or []
-    col_x = [0.5, 4.5, 8.5]
-    bullets = []
-    for ps in prod_summaries:
+    col_w = 5.6
+    for j, ps in enumerate(prod_summaries):
+        col = j % 2
+        row = j // 2
+        px = 0.7 + col * (col_w + 0.5)
+        py = 4.55 + row * 0.85
+
         pkg_label = ps["pkg"].title()
         net = fmt_money(ps["prod_net"])
-        bullets.append(f"• {ps['name']} ({pkg_label})  —  {net}/yr")
+        addon_count = len(ps.get("addons") or [])
+        addon_text = f"  +{addon_count} add-on{'s' if addon_count != 1 else ''}" if addon_count else ""
 
-    # Render up to 3 bullets per column (2 columns used)
-    left_bullets = bullets[:4]
-    right_bullets = bullets[4:8]
+        # Product row background
+        _rect(slide, px, py, col_w, 0.65, LIGHT_BG)
+        _rect(slide, px, py, 0.05, 0.65, RORANGE)
 
-    for j, b in enumerate(left_bullets):
-        add_textbox(slide, 0.6, row_y + j * 0.38, 5.8, 0.38, b,
-                    size=11, bold=False, color=MID, align=PP_ALIGN.LEFT)
-    for j, b in enumerate(right_bullets):
-        add_textbox(slide, 7.0, row_y + j * 0.38, 5.8, 0.38, b,
-                    size=11, bold=False, color=MID, align=PP_ALIGN.LEFT)
+        _text(slide, px + 0.2, py + 0.08, 3.2, 0.25, ps["name"],
+              size=13, bold=True, color=NAVY)
+        _text(slide, px + 0.2, py + 0.35, 3.2, 0.22,
+              f"{pkg_label} Package{addon_text}",
+              size=10, color=MID_TEXT)
+        _text(slide, px + col_w - 1.8, py + 0.12, 1.6, 0.35,
+              f"{net}/yr", size=14, bold=True, color=RORANGE,
+              align=PP_ALIGN.RIGHT)
 
+    # Discount callout
     if totals["disc_pct"] > 0:
-        add_textbox(slide, 0.6, 6.5, 12.0, 0.4,
-                    f"Proposal discount of {totals['disc_pct']:.1f}% applied — saving you {fmt_money(totals['discount_amount'])}",
-                    size=11, bold=True, color=ORANGE, align=PP_ALIGN.LEFT)
+        dy = 4.55 + ((len(prod_summaries) + 1) // 2) * 0.85 + 0.15
+        if dy < 6.4:
+            _rect(slide, 0.7, dy, 5.6, 0.45, GREEN_LIGHT)
+            _rect(slide, 0.7, dy, 0.05, 0.45, GREEN)
+            _text(slide, 0.9, dy + 0.08, 5.2, 0.3,
+                  f"Proposal discount of {totals['disc_pct']:.1f}% applied — saving you {fmt_money(totals['discount_amount'])}",
+                  size=11, bold=True, color=NAVY)
 
-    # Footer
-    add_rect(slide, 0, 7.2, 13.333, 0.3, LIGHT)
-    add_textbox(slide, 0.5, 7.22, 12.333, 0.25, "G2 | The World's Largest Software Marketplace",
-                size=8, bold=False, color=MID, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 0.5, 7.22, 12.333, 0.25, "Confidential",
-                size=8, bold=False, color=MID, align=PP_ALIGN.RIGHT)
+    _footer(slide, page_num=2)
 
 
-def slide_product(prs: Presentation, data: dict, prod_summary: dict):
-    """Slide 3+: Per-product detail slide."""
+# ── Slide 3+: Per-product detail ────────────────────────────────────
+
+def slide_product(prs, data, prod_summary, page_num):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _rect(slide, 0, 0, 13.333, 7.5, WHITE)
 
-    add_rect(slide, 0, 0, 13.333, 7.5, WHITE)
+    # Header
+    _rect(slide, 0, 0, 13.333, 1.25, NAVY)
+    _rect(slide, 0, 0, 0.08, 1.25, RORANGE)
+    _logo(slide, 12.1, 0.28, 0.55, variant="white")
 
-    # Navy left sidebar
-    sidebar_w = 3.8
-    add_rect(slide, 0, 0, sidebar_w, 7.5, NAVY)
-
-    # Sidebar: product name
     pname = prod_summary.get("name") or "Product"
-    add_textbox(slide, 0.2, 0.3, sidebar_w - 0.3, 0.5, "PRODUCT",
-                size=9, bold=True, color=ORANGE, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 0.2, 0.75, sidebar_w - 0.3, 1.2, pname,
-                size=24, bold=True, color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
-
-    # Orange accent
-    add_rect(slide, 0.2, 2.1, sidebar_w - 0.4, 0.05, ORANGE)
-
-    # Package badge
+    _text(slide, 0.7, 0.15, 8, 0.55, pname, size=28, bold=True, color=WHITE)
     pkg = prod_summary.get("pkg", "free").title()
-    add_textbox(slide, 0.2, 2.3, sidebar_w - 0.3, 0.35, "PACKAGE",
-                size=9, bold=True, color=LGREY, align=PP_ALIGN.LEFT)
-    add_rect(slide, 0.2, 2.65, sidebar_w - 0.4, 0.55, ORANGE)
-    add_textbox(slide, 0.2, 2.65, sidebar_w - 0.4, 0.55, pkg,
-                size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    _text(slide, 0.7, 0.72, 6, 0.35, f"{pkg} Package", size=13, color=BORDER_GREY)
+    _accent_bar(slide, 0, 1.25, 13.333, 0.05)
 
-    # ACV
-    add_textbox(slide, 0.2, 3.45, sidebar_w - 0.3, 0.35, "ANNUAL CONTRACT VALUE",
-                size=9, bold=True, color=LGREY, align=PP_ALIGN.LEFT)
-    acv_val = fmt_money(prod_summary.get("prod_net", 0))
-    add_textbox(slide, 0.2, 3.82, sidebar_w - 0.3, 0.65, acv_val,
-                size=28, bold=True, color=TEAL, align=PP_ALIGN.LEFT)
+    # Left column — pricing overview
+    left_x = 0.7
+    left_w = 5.5
 
-    # List price if different
+    # ACV card
+    _rect(slide, left_x, 1.65, left_w, 1.6, LIGHT_BG)
+    _rect(slide, left_x, 1.65, left_w, 0.05, RORANGE)
+    _text(slide, left_x + 0.3, 1.85, 3, 0.3, "ANNUAL CONTRACT VALUE",
+          size=10, bold=True, color=MID_TEXT)
+    acv = fmt_money(prod_summary.get("prod_net", 0))
+    _text(slide, left_x + 0.3, 2.2, 4, 0.7, acv,
+          size=40, bold=True, color=RORANGE)
+
     list_p = prod_summary.get("prod_list", 0)
     net_p = prod_summary.get("prod_net", 0)
     if list_p != net_p and list_p > 0:
-        add_textbox(slide, 0.2, 4.5, sidebar_w - 0.3, 0.35,
-                    f"List: {fmt_money(list_p)}/yr",
-                    size=10, bold=False, color=MID, align=PP_ALIGN.LEFT)
+        savings = fmt_money(list_p - net_p)
+        _text(slide, left_x + 0.3, 2.8, 4.5, 0.3,
+              f"List price: {fmt_money(list_p)}/yr  |  You save: {savings}",
+              size=10, color=MID_TEXT)
 
-    # Sidebar footer
-    add_rect(slide, 0, 6.9, sidebar_w, 0.6, ORANGE)
-    add_textbox(slide, 0.1, 6.93, sidebar_w - 0.1, 0.5, "G2",
-                size=22, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-
-    # ── Right panel ───────────────────────────────────────────────────
-    rx = sidebar_w + 0.4
-    rw = 13.333 - rx - 0.4
-
-    # Section: Add-ons or value props
+    # Add-ons list
     addons = prod_summary.get("addons") or []
-
     if addons:
-        add_textbox(slide, rx, 0.3, rw, 0.45, "Add-Ons Included",
-                    size=18, bold=True, color=NAVY, align=PP_ALIGN.LEFT)
-        add_rect(slide, rx, 0.82, rw, 0.04, LGREY)
+        _text(slide, left_x, 3.55, left_w, 0.35, "Included Add-Ons",
+              size=16, bold=True, color=NAVY)
+        _accent_bar(slide, left_x, 3.92, 2.0)
 
-        for k, (addon_name, addon_price) in enumerate(addons):
-            ay = 1.05 + k * 0.72
-            add_rect(slide, rx, ay, rw, 0.6, LIGHT)
-            add_rect(slide, rx, ay, 0.06, 0.6, TEAL)
-            add_textbox(slide, rx + 0.18, ay + 0.08, rw - 2.2, 0.42, addon_name,
-                        size=13, bold=True, color=NAVY, align=PP_ALIGN.LEFT)
-            add_textbox(slide, rx + rw - 2.0, ay + 0.08, 1.9, 0.42,
-                        fmt_money(addon_price) + "/yr",
-                        size=13, bold=True, color=ORANGE, align=PP_ALIGN.RIGHT)
-    else:
-        # G2 Value props
-        add_textbox(slide, rx, 0.3, rw, 0.45, "Why G2?",
-                    size=18, bold=True, color=NAVY, align=PP_ALIGN.LEFT)
-        add_rect(slide, rx, 0.82, rw, 0.04, LGREY)
+        for k, (addon_name, addon_price) in enumerate(addons[:8]):
+            ay = 4.15 + k * 0.55
+            bg = LIGHT_BG if k % 2 == 0 else WHITE
+            _rect(slide, left_x, ay, left_w, 0.48, bg)
+            _rect(slide, left_x, ay, 0.05, 0.48, GREEN)
+            _text(slide, left_x + 0.2, ay + 0.08, 3.5, 0.3, addon_name,
+                  size=12, bold=True, color=NAVY)
+            _text(slide, left_x + left_w - 1.6, ay + 0.08, 1.4, 0.3,
+                  f"{fmt_money(addon_price)}/yr",
+                  size=12, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
 
-        value_props = [
-            ("Buyer Intent Data",
-             "Know who is in-market for your category right now — before they contact you."),
-            ("Competitive Intelligence",
-             "Real-time visibility into how buyers compare you to the competition."),
-            ("Verified Reviews",
-             "2.5M+ authentic peer reviews that drive purchase decisions."),
-            ("Market Presence",
-             "Improve G2 Grid rank and category visibility for your target buyers."),
-        ]
-        for k, (vp_title, vp_desc) in enumerate(value_props):
-            vy = 1.1 + k * 1.3
-            add_rect(slide, rx, vy, rw, 1.1, LIGHT)
-            add_rect(slide, rx, vy, 0.08, 1.1, BLUE)
-            add_textbox(slide, rx + 0.22, vy + 0.1, rw - 0.3, 0.38, vp_title,
-                        size=13, bold=True, color=NAVY, align=PP_ALIGN.LEFT)
-            add_textbox(slide, rx + 0.22, vy + 0.5, rw - 0.3, 0.55, vp_desc,
-                        size=11, bold=False, color=MID, align=PP_ALIGN.LEFT, wrap=True)
+    # Right column — value propositions
+    right_x = 6.8
+    right_w = 5.85
 
-    # Footer
-    add_rect(slide, 0, 7.2, 13.333, 0.3, LIGHT)
-    add_textbox(slide, 0.5, 7.22, 12.333, 0.25, "G2 | The World's Largest Software Marketplace",
-                size=8, bold=False, color=MID, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 0.5, 7.22, 12.333, 0.25, "Confidential",
-                size=8, bold=False, color=MID, align=PP_ALIGN.RIGHT)
+    _text(slide, right_x, 1.65, right_w, 0.35, "Why This Matters",
+          size=16, bold=True, color=NAVY)
+    _accent_bar(slide, right_x, 2.02, 2.0)
+
+    value_props = [
+        ("Buyer Intent Data", "Know who is in-market for your category before they contact you.", RORANGE),
+        ("Competitive Intelligence", "Real-time visibility into how buyers compare you to competitors.", BLUE),
+        ("Verified Reviews", "2.6M+ authentic peer reviews that drive purchase decisions.", GREEN),
+        ("Market Presence", "Improve your G2 Grid rank and visibility for target buyers.", PURPLE),
+    ]
+
+    for k, (title, desc, accent) in enumerate(value_props):
+        vy = 2.3 + k * 1.15
+        _rect(slide, right_x, vy, right_w, 0.95, LIGHT_BG)
+        _rect(slide, right_x, vy, 0.06, 0.95, accent)
+        _text(slide, right_x + 0.2, vy + 0.1, right_w - 0.4, 0.3,
+              title, size=13, bold=True, color=NAVY)
+        _text(slide, right_x + 0.2, vy + 0.42, right_w - 0.4, 0.48,
+              desc, size=11, color=MID_TEXT, wrap=True)
+
+    _footer(slide, page_num=page_num)
 
 
-def slide_pricing_table(prs: Presentation, data: dict, totals: dict):
-    """Slide: Full line-item pricing table."""
+# ── Pricing Table slide ─────────────────────────────────────────────
+
+def slide_pricing_table(prs, data, totals, page_num):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _rect(slide, 0, 0, 13.333, 7.5, WHITE)
 
-    add_rect(slide, 0, 0, 13.333, 7.5, WHITE)
-
-    # Navy header bar
-    add_rect(slide, 0, 0, 13.333, 1.2, NAVY)
-    add_textbox(slide, 0.5, 0.18, 9.0, 0.55, "Pricing Details",
-                size=26, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
+    # Header
+    _rect(slide, 0, 0, 13.333, 1.25, NAVY)
+    _rect(slide, 0, 0, 0.08, 1.25, RORANGE)
+    _logo(slide, 12.1, 0.28, 0.55, variant="white")
+    _text(slide, 0.7, 0.15, 8, 0.55, "Pricing Details",
+          size=28, bold=True, color=WHITE)
     cust = data.get("cust") or data.get("customer") or ""
-    add_textbox(slide, 0.5, 0.76, 9.0, 0.35, cust,
-                size=13, bold=False, color=LGREY, align=PP_ALIGN.LEFT)
-    add_rect(slide, 0, 1.2, 13.333, 0.06, ORANGE)
+    _text(slide, 0.7, 0.72, 8, 0.35, cust, size=13, color=BORDER_GREY)
+    _accent_bar(slide, 0, 1.25, 13.333, 0.05)
 
-    # Table header row
-    th_y = 1.45
-    add_rect(slide, 0.4, th_y, 9.2, 0.42, NAVY)
-    add_rect(slide, 9.6, th_y, 1.6, 0.42, NAVY)
-    add_rect(slide, 11.2, th_y, 1.7, 0.42, NAVY)
+    # Table
+    margin_x = 0.7
+    table_w = 11.9
+    col_item = 7.5
+    col_list = 2.2
+    col_net = 2.2
 
-    add_textbox(slide, 0.5, th_y + 0.04, 9.1, 0.34, "Item",
-                size=11, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 9.6, th_y + 0.04, 1.6, 0.34, "List Price",
-                size=11, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, 11.2, th_y + 0.04, 1.7, 0.34, "Your Price",
-                size=11, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    # Table header
+    th_y = 1.6
+    _rect(slide, margin_x, th_y, table_w, 0.48, NAVY)
+    _text(slide, margin_x + 0.2, th_y + 0.08, col_item - 0.4, 0.3, "Item",
+          size=11, bold=True, color=WHITE)
+    _text(slide, margin_x + col_item, th_y + 0.08, col_list, 0.3, "List Price",
+          size=11, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    _text(slide, margin_x + col_item + col_list, th_y + 0.08, col_net, 0.3,
+          "Your Price", size=11, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
 
-    # Line items
-    row_y = th_y + 0.45
-    row_h = 0.38
+    # Rows
+    row_y = th_y + 0.48
+    row_h = 0.42
     line_items = totals.get("line_items") or []
-    max_rows = 14
+    max_rows = 12
 
     for idx, (label, list_price, net_price) in enumerate(line_items[:max_rows]):
-        bg = LIGHT if idx % 2 == 0 else WHITE
-        add_rect(slide, 0.4, row_y, 9.2, row_h, bg)
-        add_rect(slide, 9.6, row_y, 1.6, row_h, bg)
-        add_rect(slide, 11.2, row_y, 1.7, row_h, bg)
-
+        bg = LIGHT_BG if idx % 2 == 0 else WHITE
+        is_indent = label.startswith("  +")
         is_discount = net_price < 0
-        label_color = ORANGE if is_discount else NAVY
-        val_color = ORANGE if is_discount else MID
 
-        add_textbox(slide, 0.55, row_y + 0.04, 9.0, row_h - 0.08, label,
-                    size=10, bold=False, color=label_color, align=PP_ALIGN.LEFT)
+        _rect(slide, margin_x, row_y, table_w, row_h, bg)
+
+        # Rorange left accent for discount rows
+        if is_discount:
+            _rect(slide, margin_x, row_y, 0.05, row_h, RORANGE)
+
+        label_color = RORANGE if is_discount else (MID_TEXT if is_indent else NAVY)
+        label_weight = not is_indent and not is_discount
+        label_x = margin_x + (0.5 if is_indent else 0.2)
+
+        _text(slide, label_x, row_y + 0.06, col_item - 0.7, row_h - 0.12,
+              label, size=11, bold=label_weight, color=label_color)
+
         if list_price > 0:
-            add_textbox(slide, 9.6, row_y + 0.04, 1.6, row_h - 0.08,
-                        fmt_money(list_price),
-                        size=10, bold=False, color=MID, align=PP_ALIGN.CENTER)
+            _text(slide, margin_x + col_item, row_y + 0.06, col_list, row_h - 0.12,
+                  fmt_money(list_price), size=11, color=MID_TEXT, align=PP_ALIGN.CENTER)
+
         if net_price != 0:
+            val_color = RORANGE if is_discount else NAVY
             net_str = f"-{fmt_money(abs(net_price))}" if is_discount else fmt_money(net_price)
-            add_textbox(slide, 11.2, row_y + 0.04, 1.7, row_h - 0.08,
-                        net_str,
-                        size=10, bold=is_discount, color=val_color, align=PP_ALIGN.CENTER)
+            _text(slide, margin_x + col_item + col_list, row_y + 0.06,
+                  col_net, row_h - 0.12, net_str,
+                  size=11, bold=True, color=val_color, align=PP_ALIGN.CENTER)
+
         row_y += row_h
 
-    # Totals area
-    total_y = max(row_y + 0.1, 5.6)
-    add_rect(slide, 0.4, total_y, 12.5, 0.04, LGREY)
+    # Totals
+    total_y = max(row_y + 0.2, 5.4)
 
-    add_rect(slide, 8.5, total_y + 0.12, 3.4, 0.42, LIGHT)
-    add_textbox(slide, 8.5, total_y + 0.15, 2.0, 0.35, "Total ACV:",
-                size=13, bold=True, color=NAVY, align=PP_ALIGN.RIGHT)
-    add_textbox(slide, 10.5, total_y + 0.15, 1.4, 0.35,
-                fmt_money(totals["total_net"]),
-                size=13, bold=True, color=ORANGE, align=PP_ALIGN.RIGHT)
+    # Divider
+    _rect(slide, margin_x, total_y, table_w, 0.03, NAVY)
 
+    # Total ACV row
+    _rect(slide, margin_x, total_y + 0.1, table_w, 0.55, NAVY)
+    _text(slide, margin_x + 0.2, total_y + 0.18, col_item - 0.4, 0.35,
+          "Total Annual Contract Value", size=14, bold=True, color=WHITE)
+    _text(slide, margin_x + col_item + col_list, total_y + 0.18,
+          col_net, 0.35, fmt_money(totals["total_net"]),
+          size=16, bold=True, color=RORANGE, align=PP_ALIGN.CENTER)
+
+    # Savings callout
     if totals["total_savings"] > 0:
-        add_textbox(slide, 8.5, total_y + 0.62, 3.4, 0.35,
-                    f"You save: {fmt_money(totals['total_savings'])}",
-                    size=11, bold=True, color=TEAL, align=PP_ALIGN.RIGHT)
+        sy = total_y + 0.75
+        _rect(slide, margin_x, sy, table_w, 0.4, GREEN_LIGHT)
+        _rect(slide, margin_x, sy, 0.05, 0.4, GREEN)
+        _text(slide, margin_x + 0.25, sy + 0.06, 8, 0.28,
+              f"Total savings: {fmt_money(totals['total_savings'])}",
+              size=12, bold=True, color=NAVY)
+        if totals["disc_pct"] > 0:
+            _text(slide, margin_x + col_item, sy + 0.06, col_list + col_net, 0.28,
+                  f"{totals['disc_pct']:.1f}% proposal discount applied",
+                  size=10, color=MID_TEXT, align=PP_ALIGN.RIGHT)
 
-    # Navy footer with G2 stats
-    add_rect(slide, 0, 6.85, 13.333, 0.65, NAVY)
-    stats_text = ("G2 — 90M+ annual buyer interactions  |  2.5M+ verified reviews  |  "
-                  "#1 software marketplace  |  100K+ listed products")
-    add_textbox(slide, 0.5, 6.9, 12.333, 0.5, stats_text,
-                size=9, bold=False, color=LGREY, align=PP_ALIGN.CENTER)
+    _footer(slide, page_num=page_num)
 
 
-def slide_next_steps(prs: Presentation, data: dict):
-    """Slide 5: Next steps and rep contact info."""
+# ── Next Steps slide ────────────────────────────────────────────────
+
+def slide_next_steps(prs, data, page_num):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _rect(slide, 0, 0, 13.333, 7.5, NAVY)
 
-    add_rect(slide, 0, 0, 13.333, 7.5, NAVY)
+    # Rorange accent — left edge
+    _rect(slide, 0, 0, 0.08, 7.5, RORANGE)
 
-    # Orange right panel
-    add_rect(slide, 8.5, 0, 4.833, 7.5, ORANGE)
+    # G2 logo
+    _logo(slide, 11.5, 0.4, 0.55, variant="white")
 
-    # Teal accent strip
-    add_rect(slide, 0, 0, 0.12, 7.5, TEAL)
+    # Section label
+    _text(slide, 0.7, 0.5, 4, 0.3, "NEXT STEPS", size=12, bold=True, color=RORANGE)
 
-    # Left: heading
-    add_textbox(slide, 0.55, 0.35, 5.0, 0.4, "WHAT HAPPENS NEXT",
-                size=11, bold=True, color=ORANGE, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 0.55, 0.78, 7.5, 1.0, "Let's Move Forward",
-                size=40, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-    add_rect(slide, 0.55, 1.85, 5.5, 0.05, TEAL)
+    # Headline
+    _text(slide, 0.7, 1.0, 7.5, 0.8, "Let's Move Forward",
+          size=40, bold=True, color=WHITE)
+    _accent_bar(slide, 0.7, 1.9, 3.5)
 
-    # Next steps list
+    # Steps — left column
     steps = [
-        ("1", "Review this proposal",
+        ("01", "Review This Proposal",
          "Share with your stakeholders and confirm the products and pricing align with your goals."),
-        ("2", "Sign the agreement",
+        ("02", "Sign the Agreement",
          "We'll send over the MSA and Order Form for e-signature via DocuSign."),
-        ("3", "Onboarding kickoff",
-         "Your dedicated G2 Customer Success Manager will schedule your onboarding within 5 business days."),
-        ("4", "Go live",
+        ("03", "Onboarding Kickoff",
+         "Your dedicated Customer Success Manager will schedule onboarding within 5 business days."),
+        ("04", "Go Live",
          "Access your G2 dashboard, integrate your CRM, and start capturing buyer intent signals."),
     ]
 
-    for i, (num, title, desc) in enumerate(steps):
-        sy = 2.15 + i * 1.1
-        # Number circle (simulated with rect)
-        add_rect(slide, 0.55, sy, 0.5, 0.5, ORANGE)
-        add_textbox(slide, 0.55, sy, 0.5, 0.5, num,
-                    size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-        add_textbox(slide, 1.2, sy, 6.8, 0.38, title,
-                    size=13, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-        add_textbox(slide, 1.2, sy + 0.38, 6.8, 0.6, desc,
-                    size=10, bold=False, color=LGREY, align=PP_ALIGN.LEFT, wrap=True)
+    step_colors = [RORANGE, GREEN, BLUE, PURPLE]
 
-    # Right orange panel: rep contact
-    add_textbox(slide, 8.7, 0.4, 4.4, 0.45, "YOUR G2 REP",
-                size=11, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-    add_rect(slide, 8.7, 0.88, 4.2, 0.05, WHITE)
+    for i, (num, title, desc) in enumerate(steps):
+        sy = 2.25 + i * 1.1
+
+        # Number badge
+        _rect(slide, 0.7, sy, 0.65, 0.55, step_colors[i])
+        _text(slide, 0.7, sy + 0.08, 0.65, 0.4, num,
+              size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+
+        # Title + description
+        _text(slide, 1.55, sy + 0.02, 6.5, 0.3, title,
+              size=14, bold=True, color=WHITE)
+        _text(slide, 1.55, sy + 0.35, 6.5, 0.5, desc,
+              size=11, color=BORDER_GREY, wrap=True)
+
+    # Right panel — rep contact card
+    card_x = 8.8
+    card_w = 4.0
+    card_y = 1.0
+
+    _rect(slide, card_x, card_y, card_w, 5.5, NAVY_DARK)
+    _rect(slide, card_x, card_y, card_w, 0.06, RORANGE)
+
+    _text(slide, card_x + 0.35, card_y + 0.35, card_w - 0.7, 0.3,
+          "YOUR G2 CONTACT", size=10, bold=True, color=RORANGE)
 
     rep = data.get("rep") or "Your G2 Account Executive"
+    rep_title = data.get("repTitle") or "Account Executive"
     rep_email = data.get("repEmail") or ""
     rep_phone = data.get("repPhone") or ""
-    rep_title = data.get("repTitle") or "Account Executive"
 
-    add_textbox(slide, 8.7, 1.08, 4.4, 0.75, rep,
-                size=22, bold=True, color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
-    add_textbox(slide, 8.7, 1.88, 4.4, 0.38, rep_title,
-                size=12, bold=False, color=WHITE, align=PP_ALIGN.LEFT)
+    _text(slide, card_x + 0.35, card_y + 0.8, card_w - 0.7, 0.7, rep,
+          size=20, bold=True, color=WHITE, wrap=True)
+    _text(slide, card_x + 0.35, card_y + 1.55, card_w - 0.7, 0.3, rep_title,
+          size=12, color=BORDER_GREY)
 
-    add_rect(slide, 8.7, 2.45, 4.2, 0.05, RGBColor(0xFF, 0x7A, 0x65))
+    _rect(slide, card_x + 0.35, card_y + 2.0, card_w - 0.7, 0.03, RORANGE)
 
+    info_y = card_y + 2.25
     if rep_email:
-        add_textbox(slide, 8.7, 2.65, 4.4, 0.38, rep_email,
-                    size=12, bold=False, color=WHITE, align=PP_ALIGN.LEFT)
+        _text(slide, card_x + 0.35, info_y, card_w - 0.7, 0.3, rep_email,
+              size=12, color=WHITE)
+        info_y += 0.38
     if rep_phone:
-        add_textbox(slide, 8.7, 3.05, 4.4, 0.38, rep_phone,
-                    size=12, bold=False, color=WHITE, align=PP_ALIGN.LEFT)
+        _text(slide, card_x + 0.35, info_y, card_w - 0.7, 0.3, rep_phone,
+              size=12, color=WHITE)
 
-    # G2 branding on right panel
-    add_rect(slide, 8.7, 4.2, 1.3, 0.85, WHITE)
-    add_textbox(slide, 8.7, 4.2, 1.3, 0.85, "G2",
-                size=32, bold=True, color=ORANGE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, 10.1, 4.3, 3.1, 0.65,
-                "The World's Largest\nSoftware Marketplace",
-                size=10, bold=False, color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
+    # G2 branding in card
+    _logo(slide, card_x + 0.35, card_y + 3.6, 0.5, variant="white")
+    _text(slide, card_x + 1.0, card_y + 3.65, 2.8, 0.4,
+          "The World's Largest\nSoftware Marketplace",
+          size=10, color=BORDER_GREY, wrap=True)
 
-    add_textbox(slide, 8.7, 5.3, 4.4, 0.4, "g2.com",
-                size=14, bold=True, color=WHITE, align=PP_ALIGN.LEFT)
-    add_textbox(slide, 8.7, 5.72, 4.4, 1.3,
-                "Questions? Reach out anytime — we're committed to your success with G2.",
-                size=10, bold=False, color=WHITE, align=PP_ALIGN.LEFT, wrap=True)
+    _text(slide, card_x + 0.35, card_y + 4.4, card_w - 0.7, 0.9,
+          "Questions? Reach out anytime.\nWe're committed to your success with G2.",
+          size=11, color=MID_TEXT, wrap=True)
 
     # Bottom bar
-    add_rect(slide, 0, 7.15, 8.5, 0.35, RGBColor(0x03, 0x19, 0x2C))
     cust = data.get("cust") or data.get("customer") or ""
-    add_textbox(slide, 0.5, 7.17, 7.5, 0.28,
-                f"Prepared for {cust}  |  Confidential",
-                size=9, bold=False, color=MID, align=PP_ALIGN.LEFT)
+    _rect(slide, 0, 6.95, 13.333, 0.55, RORANGE)
+    _text(slide, 0.7, 7.0, 8, 0.4,
+          f"Prepared for {cust}  |  Confidential",
+          size=10, bold=True, color=WHITE)
+    _logo(slide, 12.1, 7.0, 0.38, variant="white")
 
 
-# ── Main entry point ─────────────────────────────────────────────────
+# ── Main entry point ────────────────────────────────────────────────
 
 def build_pptx(data: dict) -> bytes:
-    """
-    Build a complete G2 Proposal PPTX from a data dict and return bytes.
-
-    Expected top-level keys in data:
-      cust          — customer name (str)
-      rep           — rep name (str)
-      repEmail      — rep email (str, optional)
-      repPhone      — rep phone (str, optional)
-      repTitle      — rep title (str, optional)
-      date          — proposal date string (str, optional; defaults to today)
-      products      — list of product dicts (see compute_totals)
-      acctItems     — dict of account-level line items
-      proposalDisc  — proposal discount % (number, optional)
-    """
+    """Build a complete G2 Proposal PPTX and return bytes."""
     prs = Presentation()
     prs.slide_width = W
     prs.slide_height = H
@@ -696,31 +677,34 @@ def build_pptx(data: dict) -> bytes:
     # Slide 2: Investment Summary
     slide_summary(prs, data, totals)
 
-    # Slide 3+: Per-product slides
+    # Slide 3+: Per-product detail
+    page = 3
     for ps in totals.get("prod_summaries") or []:
-        slide_product(prs, data, ps)
+        slide_product(prs, data, ps, page_num=page)
+        page += 1
 
-    # Slide N-1: Pricing table
-    slide_pricing_table(prs, data, totals)
+    # Pricing table
+    slide_pricing_table(prs, data, totals, page_num=page)
+    page += 1
 
-    # Slide N: Next steps
-    slide_next_steps(prs, data)
+    # Next steps
+    slide_next_steps(prs, data, page_num=page)
 
     buf = io.BytesIO()
     prs.save(buf)
     return buf.getvalue()
 
 
-# ── CLI test ─────────────────────────────────────────────────────────
+# ── CLI test ────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    import sys, os
+    import sys
     sample = {
         "cust": "Acme Corp",
         "rep": "Jane Smith",
         "repEmail": "jane.smith@g2.com",
         "repPhone": "(312) 555-0100",
         "repTitle": "Senior Account Executive",
-        "date": "April 9, 2026",
+        "date": "April 10, 2026",
         "products": [
             {
                 "name": "Buyer Intent",
@@ -743,9 +727,9 @@ if __name__ == "__main__":
         },
         "proposalDisc": 10,
     }
-    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_proposal.pptx")
+    out_path = os.path.join(_HERE, "test_proposal.pptx")
     pptx_bytes = build_pptx(sample)
     with open(out_path, "wb") as f:
         f.write(pptx_bytes)
-    print(f"Test PPTX written → {out_path}")
+    print(f"Test PPTX written -> {out_path}")
     sys.exit(0)
