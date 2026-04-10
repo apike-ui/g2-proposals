@@ -246,8 +246,8 @@ const ADDON_CATALOG=[
   {id:"clicks",name:"G2 Clicks (PPC)",color:C.blue,tint:C.blueTint,tiers:[{l:"Monthly PPC Budget",p:5000}]},
   {id:"paidpromo",name:"Paid Promotions",color:C.rorange,tint:C.rorangeTint,tiers:[
     {l:"Quarterly slot (per category)",p:5000},{l:"Annual slot (per category)",p:17000}]},
-  {id:"rms",name:"Review Managed Services",color:C.green,tint:C.greenTint,tiers:[
-    {l:"Accelerator (1 product, 50 reviews)",p:10000},{l:"Growth (1 product, 100 reviews)",p:18000}]},
+  {id:"rms",name:"Review Managed Services",color:C.green,tint:C.greenTint,noDisc:true,tiers:[
+    {l:"Accelerator (1 product, 50 reviews)",p:10000},{l:"Growth (1 product, 100 reviews)",p:18000},{l:"Custom",p:0,custom:true}]},
   {id:"events",name:"Custom Event Activation",color:C.yellow,tint:C.yellowTint,tiers:[
     {l:"Core Package",p:15000},{l:"Enhanced Package",p:25000},
     {l:"Review Booth (US)",p:5500},{l:"Review Booth (International)",p:6500},{l:"Onsite G2 Rep",p:7000}]},
@@ -931,17 +931,26 @@ function BuilderMode({pendingLoad, onLoaded}){
                   <div style={{width:8,height:8,borderRadius:"50%",background:addon.color}}/>
                   <span style={{fontWeight:700,fontSize:13,color:C.navy}}>{addon.name}</span>
                 </div>
-                {on&&(()=>{const tier=addon.tiers[data.tierIdx||0];const rate=pn(data.rate)||tier.p;const qty=data.qty||1;return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{rate>0?fmt(rate*qty):"Custom"}</span>;})()}
+                {on&&(()=>{const tier=addon.tiers[data.tierIdx||0];const rate=pn(data.rate)||tier.p;const qty=tier.custom?1:(data.qty||1);return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{rate>0?fmt(rate*qty):"Custom"}</span>;})()}
               </div>
-              {on&&<div style={{padding:"6px 20px 6px 64px",background:addon.tint||"#F8FAFC",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+              {on&&(()=>{const selTier=addon.tiers[data.tierIdx||0];const isCustomTier=!!selTier.custom;const noDisc=!!addon.noDisc;
+                return <div style={{padding:"6px 20px 6px 64px",background:addon.tint||"#F8FAFC",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
                 <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>TIER</div>
-                  <select value={data.tierIdx||0} onChange={e=>updateAddon(activeIdx,addon.id,{tierIdx:parseInt(e.target.value)})} className="inp" style={{minWidth:200,fontSize:12}}>
+                  <select value={data.tierIdx||0} onChange={e=>updateAddon(activeIdx,addon.id,{tierIdx:parseInt(e.target.value),rate:"",disc:""})} className="inp" style={{minWidth:200,fontSize:12}}>
                     {addon.tiers.map((t,i)=><option key={i} value={i}>{t.l}{t.p>0?" - "+fmt(t.p):""}</option>)}
                   </select></div>
+                {isCustomTier?<React.Fragment>
+                  <div style={{flex:1,minWidth:180}}><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>DESCRIPTION</div>
+                    <input type="text" className="inp" style={{width:"100%",fontSize:12}} placeholder="Describe custom scope..."
+                      value={data.customDesc||""} onChange={e=>updateAddon(activeIdx,addon.id,{customDesc:e.target.value})}/></div>
+                  <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>PRICE</div>
+                    <input type="number" className="inp inp-r" style={{width:120}} placeholder="0"
+                      value={data.rate||""} onChange={e=>updateAddon(activeIdx,addon.id,{rate:e.target.value})}/></div>
+                </React.Fragment>:<React.Fragment>
                 <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>QTY</div>
                   <input type="number" className="inp inp-qty" min="1" value={data.qty||1} onChange={e=>updateAddon(activeIdx,addon.id,{qty:Math.max(1,parseInt(e.target.value)||1)})}/></div>
                 <div style={{display:"flex",gap:6,alignItems:"flex-end"}}>
-                  {(discOpen[addon.id]||pn(data.disc)>0)&&<div style={{textAlign:"center"}}>
+                  {!noDisc&&(discOpen[addon.id]||pn(data.disc)>0)&&<div style={{textAlign:"center"}}>
                     <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>DISC %</div>
                     <input type="number" className="inp" min="0" max="100" style={{width:64,textAlign:"center",fontSize:12}}
                       value={data.disc||""} placeholder="0" autoFocus={discOpen[addon.id]&&!pn(data.disc)}
@@ -954,11 +963,11 @@ function BuilderMode({pendingLoad, onLoaded}){
                       placeholder={addon.tiers[data.tierIdx||0].p||"Custom"}
                       onChange={e=>{const r=e.target.value;const listP=addon.tiers[data.tierIdx||0].p;const d=r&&listP?calcDisc(r,listP):"";updateAddon(activeIdx,addon.id,{rate:r,disc:d});}}/>
                   </div>
-                  {!(discOpen[addon.id]||pn(data.disc)>0)
+                  {!noDisc&&!(discOpen[addon.id]||pn(data.disc)>0)
                     ? <button onClick={()=>toggleDisc(addon.id)} style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:11,color:C.mid,padding:"2px 7px",marginBottom:1,whiteSpace:"nowrap"}}>+ disc</button>
                     : null}
-                </div>
-              </div>}
+                </div></React.Fragment>}
+              </div>;})()}
             </div>;})}
         </div>
       </div>
