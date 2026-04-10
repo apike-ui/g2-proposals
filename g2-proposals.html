@@ -1053,29 +1053,79 @@ function BuilderMode({pendingLoad, onLoaded}){
               </div>
             </div>
           </div>
-          <div style={{background:C.navy,borderRadius:10,padding:"24px 32px",marginBottom:totalList>totalAcv?8:36,display:"flex",justifyContent:"space-around",textAlign:"center"}}>
-            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Total ACV</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{fmt(totalAcv)}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
-            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Non-ACV</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{fmt(totalNonAcv)}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
-            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Products</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{products.length}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,.1)"}}/>
-            <div><div style={{color:"#7D8FA6",fontSize:11,marginBottom:4}}>Total Investment</div><div style={{color:C.rorange,fontSize:28,fontWeight:800}}>{fmt(grandTotal)}</div></div>
+          {/* ── Investment Summary (top) ── */}
+          <div style={{borderTop:`3px solid ${C.rorange}`,background:C.light,borderRadius:8,padding:"20px 28px",marginBottom:24}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <span style={{fontSize:16,fontWeight:800,color:C.navy}}>Total Annual Investment</span>
+              <span style={{fontSize:28,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+              <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
+                <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:2}}>ACV</div>
+                <div style={{fontSize:18,fontWeight:800,color:C.navy}}>{fmt(finalAcv)}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
+                <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:2}}>Non-ACV</div>
+                <div style={{fontSize:18,fontWeight:800,color:C.navy}}>{fmt(totalNonAcv)}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
+                <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:2}}>Profiles</div>
+                <div style={{fontSize:18,fontWeight:800,color:C.navy}}>{products.length}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
+                <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:2}}>SKUs</div>
+                <div style={{fontSize:18,fontWeight:800,color:C.navy}}>{prodSummaries.reduce((s,p)=>s+1+p.addonLines.length,0)+nonAcvLines.length}</div>
+              </div>
+            </div>
+            {(totalList>totalAcv||propDiscAmt>0)&&<div style={{background:"#E0FAF6",border:`1px solid ${C.green}`,borderRadius:6,padding:"8px 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:13,color:C.green}}>&#10003;</span>
+                <span style={{fontSize:12,fontWeight:700,color:"#1a6b5e"}}>Customer Savings</span>
+              </div>
+              <div style={{textAlign:"right"}}>
+                {(()=>{const totalSavings=(totalList-totalAcv)+propDiscAmt;const listBase=totalList||totalAcv;const pct=listBase>0?Math.round(totalSavings/listBase*100):0;
+                  return <><span style={{fontWeight:800,fontSize:14,color:"#1a6b5e"}}>{fmt(totalSavings)} off</span>
+                    {pct>0&&<span style={{fontSize:11,color:"#2a8a76",marginLeft:6}}>({pct}%)</span>}
+                    <span style={{fontSize:11,color:"#2a8a76",textDecoration:"line-through",marginLeft:6}}>{fmt(listBase)} list</span></>;
+                })()}
+              </div>
+            </div>}
+            {propDiscAmt>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.green,fontWeight:600,padding:"4px 0"}}>
+              <span>Proposal Discount ({propDiscPct}%)</span><span>-{fmt(propDiscAmt)}</span>
+            </div>}
+            {/* SKU Summary Table */}
+            <div style={{marginTop:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>SKU Summary by Profile</div>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                <thead><tr style={{background:C.navy}}>
+                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600,borderRadius:"4px 0 0 0"}}>Profile</th>
+                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600}}>Base Package</th>
+                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600}}>Add-Ons</th>
+                  <th style={{textAlign:"right",padding:"6px 10px",color:"#fff",fontWeight:600,borderRadius:"0 4px 0 0"}}>ACV</th>
+                </tr></thead>
+                <tbody>
+                  {prodSummaries.map((ps,i)=><tr key={i} style={{background:i%2===0?"#fff":C.light,borderBottom:"1px solid #E2E8F0"}}>
+                    <td style={{padding:"7px 10px",fontWeight:700,color:C.navy,whiteSpace:"nowrap"}}>{ps.name}</td>
+                    <td style={{padding:"7px 10px",color:C.navy}}>
+                      {ps.basePkg?<span className="pill" style={{background:ps.basePkg.color,fontSize:10}}>{ps.basePkg.name}</span>:<span style={{color:C.mid}}>—</span>}
+                    </td>
+                    <td style={{padding:"7px 10px",color:MID_TEXT}}>
+                      {ps.addonLines.length>0
+                        ?<div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {ps.addonLines.map((a,j)=><span key={j} style={{background:a.color+"18",color:a.color,fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:10,whiteSpace:"nowrap"}}>{a.name}{a.qty>1?` x${a.qty}`:""}</span>)}
+                        </div>
+                        :<span style={{fontSize:11,color:C.mid}}>None</span>}
+                    </td>
+                    <td style={{padding:"7px 10px",textAlign:"right",fontWeight:700,color:C.navy,whiteSpace:"nowrap"}}>{fmt(ps.prodAcv)}</td>
+                  </tr>)}
+                  {nonAcvLines.length>0&&<tr style={{background:prodSummaries.length%2===0?"#fff":C.light,borderTop:"2px solid #E2E8F0"}}>
+                    <td style={{padding:"7px 10px",fontWeight:600,color:C.mid}} colSpan={3}>Non-ACV Items: {nonAcvLines.map(l=>l.name+(l.qty>1?` x${l.qty}`:"")).join(", ")}</td>
+                    <td style={{padding:"7px 10px",textAlign:"right",fontWeight:700,color:C.navy}}>{fmt(totalNonAcv)}</td>
+                  </tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
-          {(totalList>totalAcv||propDiscAmt>0)&&<div style={{background:"#E0FAF6",border:`1px solid ${C.green}`,borderRadius:8,padding:"10px 20px",marginBottom:28,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:14,color:C.green}}>✓</span>
-              <span style={{fontSize:13,fontWeight:700,color:"#1a6b5e"}}>Customer Savings</span>
-              <span style={{fontSize:12,color:"#2a8a76"}}>vs. list price</span>
-            </div>
-            <div style={{textAlign:"right"}}>
-              {(()=>{const totalSavings=(totalList-totalAcv)+propDiscAmt;const listBase=totalList||totalAcv;const pct=listBase>0?Math.round(totalSavings/(listBase)*100):0;
-                return <><span style={{fontWeight:800,fontSize:16,color:"#1a6b5e"}}>{fmt(totalSavings)} off</span>
-                  {pct>0&&<span style={{fontSize:12,color:"#2a8a76",marginLeft:8}}>({pct}% discount)</span>}
-                  <div style={{fontSize:11,color:"#2a8a76",textDecoration:"line-through"}}>{fmt(listBase)} list</div></>;
-              })()}
-            </div>
-          </div>}
           {prodSummaries.map((ps,idx)=>{const color=ps.basePkg?ps.basePkg.color:C.mid;
             return <div key={idx} style={{marginBottom:28}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
@@ -1112,26 +1162,12 @@ function BuilderMode({pendingLoad, onLoaded}){
             {nonAcvLines.map((line,i)=><div key={i} className="sline"><div><span style={{fontWeight:600,fontSize:14,color:C.navy}}>{line.name}</span>{line.qty>1&&<span style={{fontSize:12,color:C.mid,marginLeft:8}}>x {line.qty}</span>}</div><span style={{fontWeight:700,fontSize:14,color:C.navy}}>{line.total>0?fmt(line.total):"Variable"}</span></div>)}
           </div>}
           {propDiscAmt>0&&<div className="sline" style={{borderTop:`1px solid #E2E8F0`,marginTop:8}}>
-            <div>
-              <span style={{fontWeight:600,fontSize:14,color:C.navy}}>Subtotal ACV</span>
-            </div>
+            <div><span style={{fontWeight:600,fontSize:14,color:C.navy}}>Subtotal ACV</span></div>
             <span style={{fontWeight:600,fontSize:14,color:C.navy}}>{fmt(totalAcv)}</span>
           </div>}
           {propDiscAmt>0&&<div className="sline">
-            <div>
-              <span style={{fontWeight:700,fontSize:14,color:C.green}}>Proposal Discount ({propDiscPct}%)</span>
-              <div style={{fontSize:12,color:C.mid,marginTop:2}}>Applied to total ACV</div>
-            </div>
-            <span style={{fontWeight:700,fontSize:14,color:C.green}}>−{fmt(propDiscAmt)}</span>
-          </div>}
-          <div style={{borderTop:`3px solid ${C.navy}`,paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:16,fontWeight:700,color:C.navy}}>Total Annual Investment</span>
-            <span style={{fontSize:26,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}</span>
-          </div>
-          {products.length>1&&<div style={{marginTop:16,padding:"12px 16px",background:C.light,borderRadius:8}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.mid,marginBottom:6}}>ACV BY PRODUCT</div>
-            {prodSummaries.map((ps,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.navy,padding:"4px 0"}}><span>{ps.name}</span><span style={{fontWeight:700}}>{fmt(ps.prodAcv)}</span></div>)}
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.mid,padding:"4px 0",borderTop:"1px solid #E2E8F0",marginTop:4}}><span>Non-ACV</span><span style={{fontWeight:700}}>{fmt(totalNonAcv)}</span></div>
+            <div><span style={{fontWeight:700,fontSize:14,color:C.green}}>Proposal Discount ({propDiscPct}%)</span></div>
+            <span style={{fontWeight:700,fontSize:14,color:C.green}}>-{fmt(propDiscAmt)}</span>
           </div>}
           <div style={{marginTop:32,paddingTop:16,borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
             <span style={{fontSize:10,color:"#B0BACA"}}>G2.com | FY27 Pricing | Internal Only | Confidential</span>

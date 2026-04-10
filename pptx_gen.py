@@ -353,46 +353,79 @@ def slide_summary(prs, data, totals):
         if i == 0:
             _rect(slide, cx, card_y + 1.75, card_w, 0.1, WHITE)
 
-    # Product breakdown section
-    _text(slide, 0.7, 3.85, 12, 0.4, "What's Included",
-          size=18, bold=True, color=NAVY)
-    _accent_bar(slide, 0.7, 4.28, 2.5)
+    # SKU Summary Table
+    _text(slide, 0.7, 3.85, 12, 0.35, "SKU Summary by Profile",
+          size=14, bold=True, color=NAVY)
+    _accent_bar(slide, 0.7, 4.2, 2.0)
 
     prod_summaries = totals.get("prod_summaries") or []
-    col_w = 5.6
-    for j, ps in enumerate(prod_summaries):
-        col = j % 2
-        row = j // 2
-        px = 0.7 + col * (col_w + 0.5)
-        py = 4.55 + row * 0.85
 
+    # Table layout
+    tx = 0.7
+    tw = 11.9
+    col_profile = 3.0
+    col_pkg = 1.6
+    col_addons = 5.3
+    col_acv = 2.0
+
+    # Table header
+    th_y = 4.4
+    _rect(slide, tx, th_y, tw, 0.38, NAVY)
+    _text(slide, tx + 0.15, th_y + 0.05, col_profile, 0.28, "Profile",
+          size=10, bold=True, color=WHITE)
+    _text(slide, tx + col_profile, th_y + 0.05, col_pkg, 0.28, "Package",
+          size=10, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    _text(slide, tx + col_profile + col_pkg, th_y + 0.05, col_addons, 0.28, "Add-Ons",
+          size=10, bold=True, color=WHITE)
+    _text(slide, tx + tw - col_acv, th_y + 0.05, col_acv - 0.15, 0.28, "ACV",
+          size=10, bold=True, color=WHITE, align=PP_ALIGN.RIGHT)
+
+    # Table rows — compact to fit many products
+    row_h = 0.34
+    max_rows = min(len(prod_summaries), 6)  # fit on slide
+    ry = th_y + 0.38
+
+    for j, ps in enumerate(prod_summaries[:max_rows]):
+        bg = LIGHT_BG if j % 2 == 0 else WHITE
+        _rect(slide, tx, ry, tw, row_h, bg)
+
+        # Profile name
+        _text(slide, tx + 0.15, ry + 0.04, col_profile - 0.2, row_h - 0.08,
+              ps["name"], size=10, bold=True, color=NAVY)
+
+        # Package
         pkg_label = ps["pkg"].title()
-        net = fmt_money(ps["prod_net"])
-        addon_count = len(ps.get("addons") or [])
-        addon_text = f"  +{addon_count} add-on{'s' if addon_count != 1 else ''}" if addon_count else ""
+        _text(slide, tx + col_profile, ry + 0.04, col_pkg, row_h - 0.08,
+              pkg_label, size=10, color=MID_TEXT, align=PP_ALIGN.CENTER)
 
-        # Product row background
-        _rect(slide, px, py, col_w, 0.65, LIGHT_BG)
-        _rect(slide, px, py, 0.05, 0.65, RORANGE)
+        # Add-ons — comma-separated list
+        addon_names = [a[0] for a in (ps.get("addons") or [])]
+        addon_str = ", ".join(addon_names) if addon_names else "—"
+        _text(slide, tx + col_profile + col_pkg + 0.1, ry + 0.04,
+              col_addons - 0.2, row_h - 0.08,
+              addon_str, size=9, color=MID_TEXT)
 
-        _text(slide, px + 0.2, py + 0.08, 3.2, 0.25, ps["name"],
-              size=13, bold=True, color=NAVY)
-        _text(slide, px + 0.2, py + 0.35, 3.2, 0.22,
-              f"{pkg_label} Package{addon_text}",
-              size=10, color=MID_TEXT)
-        _text(slide, px + col_w - 1.8, py + 0.12, 1.6, 0.35,
-              f"{net}/yr", size=14, bold=True, color=RORANGE,
+        # ACV
+        _text(slide, tx + tw - col_acv, ry + 0.04, col_acv - 0.15, row_h - 0.08,
+              fmt_money(ps["prod_net"]), size=10, bold=True, color=RORANGE,
               align=PP_ALIGN.RIGHT)
 
+        ry += row_h
+
+    # Overflow indicator
+    if len(prod_summaries) > max_rows:
+        _text(slide, tx, ry + 0.02, tw, 0.25,
+              f"+ {len(prod_summaries) - max_rows} more profiles (see detail slides)",
+              size=9, color=MID_TEXT, align=PP_ALIGN.CENTER)
+
     # Discount callout
-    if totals["disc_pct"] > 0:
-        dy = 4.55 + ((len(prod_summaries) + 1) // 2) * 0.85 + 0.15
-        if dy < 6.4:
-            _rect(slide, 0.7, dy, 5.6, 0.45, GREEN_LIGHT)
-            _rect(slide, 0.7, dy, 0.05, 0.45, GREEN)
-            _text(slide, 0.9, dy + 0.08, 5.2, 0.3,
-                  f"Proposal discount of {totals['disc_pct']:.1f}% applied — saving you {fmt_money(totals['discount_amount'])}",
-                  size=11, bold=True, color=NAVY)
+    disc_y = ry + 0.15
+    if totals["disc_pct"] > 0 and disc_y < 6.4:
+        _rect(slide, 0.7, disc_y, tw, 0.4, GREEN_LIGHT)
+        _rect(slide, 0.7, disc_y, 0.05, 0.4, GREEN)
+        _text(slide, 0.9, disc_y + 0.06, 9, 0.28,
+              f"Proposal discount of {totals['disc_pct']:.1f}% applied — saving you {fmt_money(totals['discount_amount'])}",
+              size=10, bold=True, color=NAVY)
 
     _footer(slide, page_num=2)
 
