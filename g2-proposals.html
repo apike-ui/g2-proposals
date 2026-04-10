@@ -1243,6 +1243,14 @@ function ProposalsLibrary({onEdit,onView,onNew}){
       </button>
     </div>
 
+    {/* ── Storage Warning ── */}
+    <div style={{background:"#FFF8E1",border:"1.5px solid #FFC800",borderRadius:8,padding:"12px 16px",marginBottom:20,display:"flex",alignItems:"flex-start",gap:10}}>
+      <span style={{fontSize:18,lineHeight:1,flexShrink:0}}>&#9888;</span>
+      <div style={{fontSize:12,color:"#062846",lineHeight:1.5}}>
+        <strong>Storage Notice:</strong> Proposals are stored on the server's temporary filesystem. They may be cleared when the server redeploys or restarts. Export important proposals to PPTX or Google Slides to keep a permanent copy.
+      </div>
+    </div>
+
     {/* ── Search ── */}
     <div style={{position:"relative",marginBottom:28}}>
       <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:15,color:C.mid,pointerEvents:"none"}}>🔍</span>
