@@ -163,11 +163,21 @@ def compute_totals(data: dict) -> dict:
         addons = prod.get("addons") or {}
         if isinstance(addons, dict):
             for addon_name, addon_price in addons.items():
-                ap = float(addon_price) if addon_price else 0.0
+                # Handle builder format: {on, tierIdx, qty, rate, ...}
+                if isinstance(addon_price, dict):
+                    if not addon_price.get("on", True):
+                        continue
+                    qty = int(addon_price.get("qty") or 1)
+                    rate = float(addon_price.get("rate") or 0)
+                    ap = rate * qty
+                    display_name = addon_price.get("customDesc") or addon_name
+                else:
+                    ap = float(addon_price) if addon_price else 0.0
+                    display_name = addon_name
                 prod_list += ap
                 prod_net += ap
-                line_items.append((f"  + {addon_name}", ap, ap))
-                addon_lines.append((addon_name, ap))
+                line_items.append((f"  + {display_name}", ap, ap))
+                addon_lines.append((display_name, ap))
 
         line_items.insert(len(line_items) - len(addon_lines),
                           (f"{name} ({pkg.title()} pkg)", list_base, net_base))
@@ -180,7 +190,15 @@ def compute_totals(data: dict) -> dict:
         })
 
     for label, price in acct_items.items():
-        ap = float(price) if price else 0.0
+        # Handle builder format: {on, qty, rate}
+        if isinstance(price, dict):
+            if not price.get("on", True):
+                continue
+            qty = int(price.get("qty") or 1)
+            rate = float(price.get("rate") or 0)
+            ap = rate * qty
+        else:
+            ap = float(price) if price else 0.0
         line_items.append((label, ap, ap))
         total_list += ap
         total_net += ap
