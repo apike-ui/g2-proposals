@@ -241,16 +241,16 @@ const BASE_PKGS=[
 
 /* catPricing: true = price is per-category with volume breaks + "All Categories" flat rate.
    catVolume: [{minCats, perCatPrice}] — sorted ascending. allCatPrice = flat price for all.
-   The tier selection picks the signal/scope tier; categories is a separate dimension. */
+   The tier selection picks the pricing tier; categories is a separate dimension. */
 const ADDON_CATALOG=[
   {id:"intent",name:"Buyer Intent",color:C.blue,tint:C.blueTint,catPricing:true,
     allCatPrice:75000,
     catVolume:[{minCats:1,perCatPrice:12500},{minCats:3,perCatPrice:11000},{minCats:5,perCatPrice:9500},{minCats:10,perCatPrice:8000}],
     tiers:[
-    {l:"Tier 1: 0-5K signals",p:12500},{l:"Tier 2: 5K-10K signals",p:17000},{l:"Tier 3: 10K-15K signals",p:25000},
-    {l:"Tier 4: 15K-20K signals",p:32500},{l:"Tier 5: 20K-25K signals",p:40000},{l:"Tier 6: 25K-30K signals",p:47500},
-    {l:"Tier 7: 30K-45K signals",p:57000},{l:"Tier 8: 45K-60K signals",p:65000},{l:"Tier 9: 60K-100K signals",p:70500},
-    {l:"Tier 10: 100K+ signals",p:75000}]},
+    {l:"Tier 1",p:12500},{l:"Tier 2",p:17000},{l:"Tier 3",p:25000},
+    {l:"Tier 4",p:32500},{l:"Tier 5",p:40000},{l:"Tier 6",p:47500},
+    {l:"Tier 7",p:57000},{l:"Tier 8",p:65000},{l:"Tier 9",p:70500},
+    {l:"Tier 10",p:75000}]},
   {id:"content",name:"G2 Content",color:C.purple,tint:C.purpleTint,catPricing:true,
     allCatPrice:80000,
     catVolume:[{minCats:1,perCatPrice:25000},{minCats:3,perCatPrice:22000},{minCats:5,perCatPrice:18000}],
