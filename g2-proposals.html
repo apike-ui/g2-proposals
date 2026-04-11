@@ -1408,24 +1408,33 @@ function BuilderMode({pendingLoad, onLoaded}){
 /* ================================================================
    PROPOSALS LIBRARY — searchable grid of all saved proposals
    ================================================================ */
-function ProposalsLibrary({onEdit,onView,onNew}){
+function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard}){
   const [proposals,setProposals]=useState([]);
+  const [rateCards,setRateCards]=useState([]);
   const [loading,setLoading]=useState(true);
   const [search,setSearch]=useState("");
+  const [filter,setFilter]=useState("all"); // "all" | "proposals" | "ratecards"
   const [exporting,setExporting]=useState({});
   const [exportingGSLib,setExportingGSLib]=useState({});
-  const [deleteConfirm,setDeleteConfirm]=useState(null); // id pending delete
+  const [deleteConfirm,setDeleteConfirm]=useState(null);
   const [storageMode,setStorageMode]=useState("unknown");
 
   useEffect(()=>{
     fetch("/api/storage-mode").then(r=>r.json()).then(d=>setStorageMode(d.mode)).catch(()=>{});
-    api.listProposals().then(data=>{setProposals(data);setLoading(false);}).catch(()=>setLoading(false));
+    Promise.all([
+      api.listProposals().catch(()=>[]),
+      fetch("/api/ratecards").then(r=>r.json()).then(d=>d.data||[]).catch(()=>[])
+    ]).then(([p,rc])=>{setProposals(p);setRateCards(rc);setLoading(false);});
   },[]);
 
-  const filtered=proposals.filter(p=>{
-    if(!search)return true;
-    const q=search.toLowerCase();
+  const q=(search||"").toLowerCase();
+  const filteredProposals=proposals.filter(p=>{
+    if(!q)return true;
     return (p.customer||"").toLowerCase().includes(q)||(p.rep||"").toLowerCase().includes(q)||(p.name||"").toLowerCase().includes(q);
+  });
+  const filteredRateCards=rateCards.filter(rc=>{
+    if(!q)return true;
+    return (rc.customer||"").toLowerCase().includes(q)||(rc.owner||"").toLowerCase().includes(q)||(rc.name||"").toLowerCase().includes(q);
   });
 
   const totalPipeline=proposals.reduce((s,p)=>s+(p.grand_total||0),0);
@@ -1483,16 +1492,21 @@ function ProposalsLibrary({onEdit,onView,onNew}){
 
   return <div>
     {/* ── Header ── */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28,flexWrap:"wrap",gap:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:16}}>
       <div>
-        <h2 style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:4}}>Proposals</h2>
+        <h2 style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:4}}>Proposals + Rate Cards</h2>
         <p style={{fontSize:13,color:C.mid}}>
-          {loading?"Loading…":`${proposals.length} proposal${proposals.length!==1?"s":""}  ·  ${fmt(totalPipeline)} total pipeline`}
+          {loading?"Loading...":`${proposals.length} proposal${proposals.length!==1?"s":""}  ·  ${rateCards.length} rate card${rateCards.length!==1?"s":""}  ·  ${fmt(totalPipeline)} pipeline`}
         </p>
       </div>
-      <button className="btn btn-pri" onClick={onNew} style={{display:"flex",alignItems:"center",gap:6,fontSize:14,padding:"10px 22px"}}>
-        <span style={{fontSize:20,lineHeight:1,marginTop:-1}}>+</span> New Proposal
-      </button>
+      <div style={{display:"flex",gap:8}}>
+        <button className="btn btn-pri" onClick={onNew} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,padding:"9px 18px"}}>
+          <span style={{fontSize:18,lineHeight:1}}>+</span> New Proposal
+        </button>
+        <button className="btn btn-sec" onClick={onNewRateCard} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,padding:"9px 18px"}}>
+          <span style={{fontSize:18,lineHeight:1}}>+</span> New Rate Card
+        </button>
+      </div>
     </div>
 
     {/* ── Storage Banner ── */}
@@ -1507,35 +1521,62 @@ function ProposalsLibrary({onEdit,onView,onNew}){
       <div style={{fontSize:12,color:"#062846"}}><strong>Cloud storage active</strong> — proposals are saved permanently and shared across all users.</div>
     </div>}
 
-    {/* ── Search ── */}
-    <div style={{position:"relative",marginBottom:28}}>
-      <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:15,color:C.mid,pointerEvents:"none"}}>🔍</span>
-      <input type="text" className="inp" placeholder="Search by customer, rep, or proposal name…"
-        value={search} onChange={e=>setSearch(e.target.value)}
-        style={{width:"100%",paddingLeft:38,fontSize:14,padding:"10px 14px 10px 38px"}}/>
+    {/* ── Filter + Search ── */}
+    <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
+      <div style={{display:"flex",background:"#fff",borderRadius:6,border:"1px solid #E2E8F0",overflow:"hidden"}}>
+        {[["all","All"],["proposals","Proposals"],["ratecards","Rate Cards"]].map(function(f){return <button key={f[0]} onClick={function(){setFilter(f[0]);}}
+          style={{padding:"7px 14px",fontSize:12,fontWeight:filter===f[0]?700:500,border:"none",cursor:"pointer",
+          background:filter===f[0]?C.navy:"#fff",color:filter===f[0]?"#fff":C.mid}}>{f[1]}</button>;})}
+      </div>
+      <div style={{position:"relative",flex:1,minWidth:200}}>
+        <input type="text" className="inp" placeholder="Search by name, customer, rep, or owner..."
+          value={search} onChange={e=>setSearch(e.target.value)}
+          style={{width:"100%",fontSize:13,padding:"8px 14px 8px 14px"}}/>
+      </div>
     </div>
 
     {/* ── Content ── */}
     {loading?(
-      <div style={{textAlign:"center",padding:"80px 0",color:C.mid,fontSize:15}}>
-        <div style={{fontSize:36,marginBottom:12}}>⏳</div>Loading proposals…
-      </div>
-    ):filtered.length===0?(
-      <div style={{textAlign:"center",padding:"80px 0"}}>
-        <div style={{fontSize:52,marginBottom:16}}>{search?"🔍":"📋"}</div>
-        <div style={{fontSize:20,fontWeight:700,color:C.navy,marginBottom:8}}>
-          {search?"No proposals match your search":"No proposals saved yet"}
+      <div style={{textAlign:"center",padding:"80px 0",color:C.mid,fontSize:15}}>Loading...</div>
+    ):(()=>{
+      const showProposals=filter==="all"||filter==="proposals";
+      const showRC=filter==="all"||filter==="ratecards";
+      const hasProposals=showProposals&&filteredProposals.length>0;
+      const hasRC=showRC&&filteredRateCards.length>0;
+      if(!hasProposals&&!hasRC)return <div style={{textAlign:"center",padding:"80px 0"}}>
+        <div style={{fontSize:20,fontWeight:700,color:C.navy,marginBottom:8}}>{q?"No results match your search":"Nothing saved yet"}</div>
+        <p style={{fontSize:14,color:C.mid,marginBottom:28}}>{q?"Try a different search term":"Create a proposal or rate card to get started."}</p>
+        {!q&&<div style={{display:"flex",gap:10,justifyContent:"center"}}>
+          <button className="btn btn-pri" onClick={onNew}>New Proposal</button>
+          <button className="btn btn-sec" onClick={onNewRateCard}>New Rate Card</button>
+        </div>}
+      </div>;
+      return <div>
+      {/* Rate Cards section */}
+      {hasRC&&<div style={{marginBottom:hasProposals?28:0}}>
+        {showProposals&&<div style={{fontSize:11,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>Rate Cards ({filteredRateCards.length})</div>}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {filteredRateCards.map(rc=><div key={"rc-"+rc.id} className="card card-hover" onClick={function(){onEditRateCard(rc);}} style={{overflow:"hidden",cursor:"pointer"}}>
+            <div style={{height:5,background:C.blue,flexShrink:0}}/>
+            <div style={{padding:"16px 20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:800,color:C.navy,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rc.name||"Untitled"}</div>
+                  {rc.customer&&<div style={{fontSize:12,color:C.blue,fontWeight:600,marginTop:2}}>{rc.customer}</div>}
+                </div>
+                <span className="pill" style={{background:C.blue,flexShrink:0}}>Rate Card</span>
+              </div>
+              {rc.owner&&<div style={{fontSize:11,color:C.mid,marginTop:6}}>Owner: {rc.owner}</div>}
+              <div style={{fontSize:10,color:C.mid,marginTop:4}}>{rc.updated_at?new Date(rc.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):""}</div>
+            </div>
+          </div>)}
         </div>
-        <p style={{fontSize:14,color:C.mid,marginBottom:28,maxWidth:360,margin:"0 auto 28px"}}>
-          {search?"Try a different search term":"Build your first proposal and save it to see it here."}
-        </p>
-        {!search&&<button className="btn btn-pri" style={{fontSize:14,padding:"11px 28px"}} onClick={onNew}>
-          Create your first proposal
-        </button>}
-      </div>
-    ):(
+      </div>}
+      {/* Proposals section */}
+      {hasProposals&&<div>
+      {showRC&&<div style={{fontSize:11,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:10}}>Proposals ({filteredProposals.length})</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))",gap:20}}>
-        {filtered.map(p=>{
+        {filteredProposals.map(p=>{
           const ac=accent(p.grand_total||0);
           const isExp=exporting[p.id],isExpGS=exportingGSLib[p.id];
           return <div key={p.id} className="card card-hover" style={{overflow:"hidden",display:"flex",flexDirection:"column",transition:"transform .15s,box-shadow .15s"}}>
@@ -1591,8 +1632,9 @@ function ProposalsLibrary({onEdit,onView,onNew}){
             </div>
           </div>;
         })}
-      </div>
-    )}
+      </div></div>}
+      </div>;
+    })()}
   </div>;
 }
 
@@ -1728,10 +1770,10 @@ function RateCardEditor({card,setCard,rcName,setRcName,rcCustomer,setRcCustomer,
   </div>;
 }
 
-function RateCardMode(){
+function RateCardMode({initialRateCard,onDone}){
   const [cards,setCards]=useState([]);
   const [loading,setLoading]=useState(true);
-  const [editingId,setEditingId]=useState(null);
+  const [editingId,setEditingId]=useState(initialRateCard?initialRateCard.id:null);
   const [card,setCard]=useState(null);
   const [rcName,setRcName]=useState("");
   const [rcCustomer,setRcCustomer]=useState("");
@@ -1750,7 +1792,10 @@ function RateCardMode(){
   const loadList=()=>{
     fetch("/api/ratecards").then(r=>r.json()).then(d=>{setCards(d.data||[]);setLoading(false);}).catch(()=>setLoading(false));
   };
-  useEffect(loadList,[]);
+  useEffect(()=>{
+    loadList();
+    if(initialRateCard&&initialRateCard.id){doEdit(initialRateCard);}
+  },[]);
 
   const doNew=()=>{setEditingId("new");setCard(buildDefault());setRcName("");setRcCustomer("");setRcOwner("");};
 
@@ -1784,7 +1829,7 @@ function RateCardMode(){
     setSaving(false);
   };
 
-  const doBack=()=>{setEditingId(null);setCard(null);loadList();};
+  const doBack=()=>{if(onDone){onDone();}else{setEditingId(null);setCard(null);loadList();}};
 
   if(loading)return <div style={{textAlign:"center",padding:60,color:C.mid}}>Loading...</div>;
 
@@ -1825,12 +1870,15 @@ function App(){
   const [authed,setAuthed]=useState(()=>!!sessionStorage.getItem("g2auth"));
   const [mode,setMode]=useState("proposals");
   const [pendingLoad,setPendingLoad]=useState(null);
+  const [pendingRateCard,setPendingRateCard]=useState(null);
 
   if(!authed)return <LoginGate onAuth={()=>setAuthed(true)}/>;
 
   const goEdit=(p)=>{setPendingLoad({proposal:p,sub:"products"});setMode("builder");};
   const goView=(p)=>{setPendingLoad({proposal:p,sub:"preview"});setMode("builder");};
   const goNew=()=>{setPendingLoad(null);setMode("builder");};
+  const goEditRateCard=(rc)=>{setPendingRateCard(rc);setMode("ratecard");};
+  const goNewRateCard=()=>{setPendingRateCard(null);setMode("ratecard");};
 
   return <div style={{minHeight:"100vh",background:C.light}}>
     <div style={{background:C.navy,padding:"20px 0 20px"}} className="no-print">
@@ -1843,9 +1891,9 @@ function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div className="mode-bar">
-              <button className={`mode-btn ${mode==="proposals"?"on":""}`} onClick={()=>setMode("proposals")}>📋 Proposals</button>
+              <button className={`mode-btn ${mode==="proposals"?"on":""}`} onClick={()=>setMode("proposals")}>Proposals + Rate Cards</button>
               <button className={`mode-btn ${mode==="builder"?"on":""}`} onClick={goNew}>+ New Proposal</button>
-              <button className={`mode-btn ${mode==="ratecard"?"on":""}`} onClick={()=>setMode("ratecard")}>Create Account Rate Card</button>
+              <button className={`mode-btn ${mode==="ratecard"?"on":""}`} onClick={()=>setMode("ratecard")}>+ New Rate Card</button>
               <button className={`mode-btn ${mode==="suite"?"on":""}`} onClick={()=>setMode("suite")}>Product Reference</button>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={()=>{sessionStorage.removeItem("g2auth");setAuthed(false);}}>Sign Out</button>
@@ -1854,8 +1902,8 @@ function App(){
       </div>
     </div>
     <div className="ctr" style={{paddingTop:28,paddingBottom:48}}>
-      {mode==="proposals"&&<ProposalsLibrary onEdit={goEdit} onView={goView} onNew={goNew}/>}
-      {mode==="ratecard"&&<RateCardMode/>}
+      {mode==="proposals"&&<ProposalsLibrary onEdit={goEdit} onView={goView} onNew={goNew} onEditRateCard={goEditRateCard} onNewRateCard={goNewRateCard}/>}
+      {mode==="ratecard"&&<RateCardMode initialRateCard={pendingRateCard} onDone={()=>{setPendingRateCard(null);setMode("proposals");}}/>}
       {mode==="suite"&&<SuiteMode/>}
       {mode==="builder"&&<BuilderMode pendingLoad={pendingLoad} onLoaded={()=>setPendingLoad(null)}/>}
     </div>
