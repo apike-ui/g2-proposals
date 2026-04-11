@@ -112,6 +112,10 @@ else:
 
 # ── UI ──────────────────────────────────────────────────────────────
 
+@app.route("/assets/<path:filename>")
+def serve_assets(filename):
+    return send_file(os.path.join(_HERE, "assets", filename))
+
 @app.route("/")
 @app.route("/proposals")
 def serve_ui():

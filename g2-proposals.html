@@ -320,11 +320,7 @@ function LoginGate({onAuth}){
   return <div className="login-wrap">
     <div className="login-card">
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,marginBottom:16}}>
-          <div style={{width:36,height:36,background:C.rorange,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{color:"#fff",fontWeight:800,fontSize:18}}>G2</span>
-          </div>
-        </div>
+        <img src="/assets/G2Logo-Red.png" alt="G2" style={{height:48,marginBottom:12}}/>
         <h1 style={{fontSize:22,fontWeight:800,color:C.navy}}>Proposal Builder</h1>
         <p style={{fontSize:13,color:C.mid,marginTop:4}}>FY27 · Internal Only</p>
       </div>
@@ -1308,10 +1304,13 @@ function BuilderMode({pendingLoad, onLoaded}){
         <div className="card" style={{padding:"36px 40px",maxWidth:780,margin:"0 auto"}}>
           <div style={{borderTop:`4px solid ${C.rorange}`,paddingTop:24,marginBottom:32}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div>
-                <div style={{fontSize:11,fontWeight:600,color:C.mid,textTransform:"uppercase",letterSpacing:1}}>Proposal</div>
-                <h1 style={{fontSize:28,fontWeight:800,color:C.navy,marginTop:4}}>{cust||"Customer"}</h1>
-                <p style={{fontSize:13,color:C.mid,marginTop:4}}>G2 FY27 Multi-Product Recommendation</p>
+              <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                <img src="/assets/G2Logo-Red.png" alt="G2" style={{height:40,marginTop:4}}/>
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:C.mid,textTransform:"uppercase",letterSpacing:1}}>Proposal</div>
+                  <h1 style={{fontSize:28,fontWeight:800,color:C.navy,marginTop:4}}>{cust||"Customer"}</h1>
+                  <p style={{fontSize:13,color:C.mid,marginTop:4}}>G2 FY27 Multi-Product Recommendation</p>
+                </div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:12,color:C.mid}}>{today}</div>
@@ -1492,8 +1491,11 @@ function BuilderMode({pendingLoad, onLoaded}){
             <div><span style={{fontWeight:700,fontSize:14,color:C.blue}}>{dl.name} ({dl.pct}%)</span>{dl.termReq>0&&<div style={{fontSize:11,color:C.mid,marginTop:2}}>Applied for {dl.termReq}+ month term</div>}</div>
             <span style={{fontWeight:700,fontSize:14,color:C.blue}}>-{fmt(dl.amount)}</span>
           </div>;})}
-          <div style={{marginTop:32,paddingTop:16,borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
-            <span style={{fontSize:10,color:"#B0BACA"}}>G2.com | FY27 Pricing | Internal Only | Confidential</span>
+          <div style={{marginTop:32,paddingTop:16,borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <img src="/assets/G2Logo-Red.png" alt="G2" style={{height:14,opacity:0.5}}/>
+              <span style={{fontSize:10,color:"#B0BACA"}}>g2.com | Internal Only | Confidential</span>
+            </div>
             <span style={{fontSize:10,color:"#B0BACA"}}>Prepared {today}</span>
           </div>
         </div>
@@ -2083,9 +2085,12 @@ function App(){
       <div className="ctr">
         <div style={{borderTop:`3px solid ${C.rorange}`,marginBottom:16}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
-          <div>
-            <h1 style={{color:"#fff",fontSize:24,fontWeight:700}}>G2 Product Suite & Proposal Builder</h1>
-            <p style={{color:C.green,fontSize:12,marginTop:4,fontWeight:500}}>FY27 Enterprise Offerings | Internal Only</p>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <img src="/assets/G2Logo-White.png" alt="G2" style={{height:36}}/>
+            <div>
+              <h1 style={{color:"#fff",fontSize:22,fontWeight:700}}>Proposal Builder</h1>
+              <p style={{color:C.green,fontSize:11,marginTop:2,fontWeight:500}}>FY27 Enterprise Offerings | Internal Only</p>
+            </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div className="mode-bar">
@@ -2105,8 +2110,11 @@ function App(){
       {mode==="suite"&&<SuiteMode/>}
       {mode==="builder"&&<BuilderMode pendingLoad={pendingLoad} onLoaded={()=>setPendingLoad(null)}/>}
     </div>
-    <div style={{background:C.navy,padding:"10px 0"}}><div className="ctr" style={{display:"flex",justifyContent:"space-between"}}>
-      <span style={{color:"#7D8FA6",fontSize:10}}>G2 Product Suite & Proposal Builder | FY27 | Source: Comprehensive Pricing & Packaging Doc, Event Services Menu, Partnership Deck, Technical Consulting Deck</span>
+    <div style={{background:C.navy,padding:"10px 0"}}><div className="ctr" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <img src="/assets/G2Logo-White.png" alt="G2" style={{height:16,opacity:0.6}}/>
+        <span style={{color:"#7D8FA6",fontSize:10}}>Proposal Builder | FY27</span>
+      </div>
       <span style={{color:"#7D8FA6",fontSize:10}}>g2.com | Internal Only</span>
     </div></div>
   </div>;
