@@ -1104,8 +1104,11 @@ function BuilderMode({pendingLoad, onLoaded}){
           {/* ── Investment Summary (top) ── */}
           <div style={{borderTop:`3px solid ${C.rorange}`,background:C.light,borderRadius:8,padding:"20px 28px",marginBottom:24}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <span style={{fontSize:16,fontWeight:800,color:C.navy}}>Total Annual Investment</span>
-              <span style={{fontSize:28,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}</span>
+              <div>
+                <span style={{fontSize:16,fontWeight:800,color:C.navy}}>Total Annual Investment</span>
+                {parseInt(contractTerm)>12&&<span style={{fontSize:12,color:C.mid,marginLeft:8}}>({fmt(grandTotal*Math.ceil(parseInt(contractTerm)/12))} total contract value)</span>}
+              </div>
+              <span style={{fontSize:28,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}/yr</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
               <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
@@ -1178,6 +1181,48 @@ function BuilderMode({pendingLoad, onLoaded}){
                 </div>)}
               </div>
             </div>}
+            {/* ── Cost by Year ── */}
+            {(()=>{
+              const termMonths=parseInt(contractTerm)||12;
+              const years=Math.ceil(termMonths/12);
+              if(years<=1)return null;
+              const annualAcv=finalAcv;const annualNonAcv=totalNonAcv;const annualTotal=grandTotal;
+              const yearRows=[];
+              let cumulative=0;
+              for(let y=1;y<=years;y++){
+                const isPartial=y===years&&(termMonths%12!==0);
+                const fraction=isPartial?(termMonths%12)/12:1;
+                const yrAcv=Math.round(annualAcv*fraction);
+                const yrNonAcv=Math.round(annualNonAcv*fraction);
+                const yrTotal=yrAcv+yrNonAcv;
+                cumulative+=yrTotal;
+                yearRows.push({year:y,acv:yrAcv,nonAcv:yrNonAcv,total:yrTotal,cumulative,partial:isPartial,months:isPartial?(termMonths%12):12});
+              }
+              return <div style={{marginTop:12}}>
+                <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Cost by Year</div>
+                <div style={{borderRadius:6,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1.5fr 2fr 2fr 2fr 2fr",background:C.navy,padding:"6px 0"}}>
+                    <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11}}>Year</div>
+                    <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11,textAlign:"right"}}>ACV</div>
+                    <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11,textAlign:"right"}}>Non-ACV</div>
+                    <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11,textAlign:"right"}}>Annual Total</div>
+                    <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11,textAlign:"right"}}>Cumulative</div>
+                  </div>
+                  {yearRows.map(function(yr){return <div key={yr.year} style={{display:"grid",gridTemplateColumns:"1.5fr 2fr 2fr 2fr 2fr",padding:"8px 0",background:yr.year%2===1?"#fff":C.light,borderTop:"1px solid #E2E8F0"}}>
+                    <div style={{padding:"0 10px",fontWeight:700,fontSize:12,color:C.navy}}>{"Year "+yr.year}{yr.partial?" ("+yr.months+"mo)":""}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontSize:12,color:C.navy}}>{fmt(yr.acv)}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontSize:12,color:C.mid}}>{fmt(yr.nonAcv)}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:700,fontSize:12,color:C.rorange}}>{fmt(yr.total)}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:600,fontSize:12,color:C.navy}}>{fmt(yr.cumulative)}</div>
+                  </div>;})}
+                  <div style={{display:"grid",gridTemplateColumns:"5.5fr 2fr 2fr",padding:"8px 0",borderTop:"2px solid "+C.navy,background:C.navy}}>
+                    <div style={{padding:"0 10px",fontWeight:700,fontSize:12,color:"#fff"}}>Total Contract Value ({years} year{years>1?"s":""})</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:800,fontSize:14,color:C.rorange}}>{fmt(cumulative)}</div>
+                    <div style={{padding:"0 10px"}}></div>
+                  </div>
+                </div>
+              </div>;
+            })()}
           </div>
           {prodSummaries.map((ps,idx)=>{const color=ps.basePkg?ps.basePkg.color:C.mid;
             return <div key={idx} style={{marginBottom:28}}>
