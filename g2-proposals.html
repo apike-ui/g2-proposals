@@ -967,11 +967,9 @@ function BuilderMode({pendingLoad, onLoaded}){
     setExporting(false);
   };
 
-  /* Export to Google Slides */
+  /* Export to Google Slides — downloads PPTX then opens Google Drive upload */
   const [exportingGS,setExportingGS]=useState(false);
-  const [gsSetupOpen,setGsSetupOpen]=useState(false);
   const doExportGoogleSlides=async()=>{
-    if(!GOOGLE_CLIENT_ID){setGsSetupOpen(true);return;}
     setExportingGS(true);
     const totals2=computeTotals();
     const rcMeta2=rateCardId?rateCardList.find(function(r){return r.id===rateCardId;}):null;
@@ -982,31 +980,21 @@ function BuilderMode({pendingLoad, onLoaded}){
         propDiscAmt:totals2.propDiscAmt,rcDiscAmt:totals2.rcDiscAmt,rcDiscLines:totals2.rcDiscLines,
         finalAcv:totals2.finalAcv,grandTotal:totals2.grandTotal}};
     try{
-      /* Step 1 — get PPTX bytes from server */
       const pptxRes=await fetch("/api/proposals/export-pptx",{
         method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snapshot)
       });
       if(!pptxRes.ok)throw new Error("PPTX generation failed ("+pptxRes.status+")");
       const pptxBlob=await pptxRes.blob();
-      /* Step 2 — Google OAuth popup */
-      const token=await _getGoogleToken();
-      /* Step 3 — multipart upload to Drive, auto-convert to Slides */
-      const name=`G2 Proposal \u2014 ${cust||"Proposal"}`;
-      const meta=JSON.stringify({name,mimeType:"application/vnd.google-apps.presentation"});
-      const form=new FormData();
-      form.append("metadata",new Blob([meta],{type:"application/json"}));
-      form.append("file",pptxBlob);
-      const upRes=await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
-        {method:"POST",headers:{Authorization:`Bearer ${token}`},body:form}
-      );
-      if(!upRes.ok){const e=await upRes.json();throw new Error(e.error?.message||"Upload failed");}
-      const {webViewLink}=await upRes.json();
-      window.open(webViewLink,"_blank");
+      /* Download the PPTX file */
+      const fname="G2_Proposal_"+(cust||"Proposal").replace(/\s+/g,"_")+".pptx";
+      const url=URL.createObjectURL(pptxBlob);
+      const a=document.createElement("a");a.href=url;a.download=fname;
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+      /* Open Google Drive — user uploads the downloaded file, Drive auto-converts to Slides */
+      setTimeout(function(){window.open("https://drive.google.com/drive/my-drive","_blank");},500);
     }catch(e){
-      if(e.message!=="popup_closed_by_user"&&e.message!=="access_denied"){
-        alert("Google Slides export failed:\n"+e.message);
-      }
+      alert("Export failed: "+e.message);
     }
     setExportingGS(false);
   };
@@ -1305,27 +1293,10 @@ function BuilderMode({pendingLoad, onLoaded}){
                 <path d="M14 2l6 6h-5a1 1 0 01-1-1V2z" fill="#ffffff" opacity=".6"/>
                 <path d="M8 13h8M8 16h5" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              {exportingGS?<span>⏳ Uploading…</span>:<span>Export to Google Slides</span>}
+              {exportingGS?<span>⏳ Exporting…</span>:<span>Open in Google Slides</span>}
             </button>
           </div>
         </div>
-        {gsSetupOpen&&<div style={{position:"fixed",inset:0,background:"rgba(6,40,70,.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setGsSetupOpen(false)}>
-          <div style={{background:"#fff",borderRadius:14,padding:"36px 40px",maxWidth:520,width:"calc(100% - 48px)",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-              <h3 style={{fontSize:18,fontWeight:800,color:"#062846"}}>Set up Google Slides export</h3>
-              <button onClick={()=>setGsSetupOpen(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#4D6480",lineHeight:1}}>×</button>
-            </div>
-            <p style={{fontSize:13,color:"#4D6480",lineHeight:1.6,marginBottom:16}}>This feature exports your proposal directly to Google Slides in your Drive. It requires a one-time Google Cloud setup (free):</p>
-            <ol style={{fontSize:13,color:"#062846",lineHeight:2,paddingLeft:20,marginBottom:20}}>
-              <li>Go to <a href="https://console.cloud.google.com" target="_blank" style={{color:"#1a73e8"}}>console.cloud.google.com</a> → create a project</li>
-              <li>Enable <strong>Google Drive API</strong></li>
-              <li>Credentials → <strong>Create OAuth 2.0 Client ID</strong> (type: Web Application)</li>
-              <li>Add Authorized JavaScript origins:<br/><code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>http://localhost:5001</code> and your public tunnel URL</li>
-              <li>Copy the <strong>Client ID</strong> and paste it into <code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>GOOGLE_CLIENT_ID</code> in <code style={{background:"#F2F4F7",padding:"2px 6px",borderRadius:4,fontSize:12}}>g2-proposals.html</code></li>
-            </ol>
-            <p style={{fontSize:12,color:"#7D8FA6",borderTop:"1px solid #E2E8F0",paddingTop:12}}>Once set, clicking this button opens a Google sign-in popup, then creates a Google Slides file in your Drive.</p>
-          </div>
-        </div>}
         <div className="card" style={{padding:"36px 40px",maxWidth:780,margin:"0 auto"}}>
           <div style={{borderTop:`4px solid ${C.rorange}`,paddingTop:24,marginBottom:32}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -1614,7 +1585,6 @@ function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard,onLo
   };
 
   const doExportGSLib=async(p)=>{
-    if(!GOOGLE_CLIENT_ID){alert("Google Slides export requires a Google OAuth Client ID.\n\nOpen any proposal → Preview tab → click \"Export to Google Slides\" for setup instructions.");return;}
     setExportingGSLib(prev=>({...prev,[p.id]:true}));
     try{
       const vers=await api.listVersions(p.id);
@@ -1623,16 +1593,13 @@ function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard,onLo
       const pptxRes=await fetch("/api/proposals/export-pptx",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v.snapshot)});
       if(!pptxRes.ok)throw new Error("PPTX generation failed");
       const pptxBlob=await pptxRes.blob();
-      const token=await _getGoogleToken();
-      const name=`G2 Proposal \u2014 ${p.customer||p.name||"Proposal"}`;
-      const form=new FormData();
-      form.append("metadata",new Blob([JSON.stringify({name,mimeType:"application/vnd.google-apps.presentation"})],{type:"application/json"}));
-      form.append("file",pptxBlob);
-      const upRes=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",{method:"POST",headers:{Authorization:`Bearer ${token}`},body:form});
-      if(!upRes.ok){const e=await upRes.json();throw new Error(e.error?.message||"Upload failed");}
-      const{webViewLink}=await upRes.json();
-      window.open(webViewLink,"_blank");
-    }catch(e){if(e.message!=="popup_closed_by_user"&&e.message!=="access_denied")alert("Google Slides export failed:\n"+e.message);}
+      const fname="G2_Proposal_"+(p.customer||"Proposal").replace(/\s+/g,"_")+".pptx";
+      const url=URL.createObjectURL(pptxBlob);
+      const a=document.createElement("a");a.href=url;a.download=fname;
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+      setTimeout(function(){window.open("https://drive.google.com/drive/my-drive","_blank");},500);
+    }catch(e){alert("Export failed: "+e.message);}
     setExportingGSLib(prev=>({...prev,[p.id]:false}));
   };
 
