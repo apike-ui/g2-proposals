@@ -664,21 +664,38 @@ function BuilderMode({pendingLoad, onLoaded}){
         const rcPrice=rc.basePkgs[p.basePkg].price;
         if(rcPrice!=null&&rcPrice>0)p.baseRate=String(rcPrice);
       }
-      /* Override addon rates */
+      /* Override addon rates — if selected tier is excluded, bump to highest available */
       const newAddons={...p.addons};
       Object.keys(newAddons).forEach(aid=>{
         const rcAddon=rc.addons&&rc.addons[aid];
-        if(!rcAddon)return;
+        if(!rcAddon||!rcAddon.tiers)return;
         const addon={...newAddons[aid]};
-        const tierIdx=addon.tierIdx||0;
-        const rcTier=rcAddon.tiers&&rcAddon.tiers[tierIdx];
+        let tierIdx=addon.tierIdx||0;
+        let rcTier=rcAddon.tiers[tierIdx];
+
+        /* If current tier is excluded, find the highest-priced available tier */
+        if(!rcTier||rcTier.excluded){
+          let bestIdx=-1;let bestPrice=0;
+          rcAddon.tiers.forEach(function(t,i){
+            if(!t.excluded){
+              const price=t.myPrice||t.listPrice||0;
+              if(price>=bestPrice){bestPrice=price;bestIdx=i;}
+            }
+          });
+          if(bestIdx===-1){
+            /* All tiers excluded — remove addon entirely */
+            delete newAddons[aid];return;
+          }
+          tierIdx=bestIdx;
+          rcTier=rcAddon.tiers[tierIdx];
+          addon.tierIdx=tierIdx;
+        }
+
+        /* Apply the rate card price */
         if(rcTier&&rcTier.myPrice!=null&&rcTier.myPrice>0){
           addon.rate=String(rcTier.myPrice);
         }
-        /* Remove excluded tiers */
-        if(rcTier&&rcTier.excluded){
-          delete newAddons[aid];return;
-        }
+        addon.disc="";
         newAddons[aid]=addon;
       });
       p.addons=newAddons;
