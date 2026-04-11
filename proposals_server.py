@@ -32,32 +32,38 @@ def _supa_headers(prefer=None):
     return h
 
 def _supa_get(table, params=""):
-    r = http_requests.get(
-        f"{SUPABASE_URL}/rest/v1/{table}?{params}",
-        headers=_supa_headers()
-    )
-    r.raise_for_status()
-    return r.json()
+    url = f"{SUPABASE_URL}/rest/v1/{table}?{params}"
+    try:
+        r = http_requests.get(url, headers=_supa_headers(), timeout=15)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"[SUPABASE ERROR] GET {url}: {e}")
+        raise
 
 def _supa_post(table, data):
-    r = http_requests.post(
-        f"{SUPABASE_URL}/rest/v1/{table}",
-        headers=_supa_headers(prefer="return=representation"),
-        json=data
-    )
-    r.raise_for_status()
-    rows = r.json()
-    return rows[0] if rows else None
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    try:
+        r = http_requests.post(url, headers=_supa_headers(prefer="return=representation"),
+                               json=data, timeout=15)
+        r.raise_for_status()
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception as e:
+        print(f"[SUPABASE ERROR] POST {url}: {e}")
+        raise
 
 def _supa_patch(table, match, data):
-    r = http_requests.patch(
-        f"{SUPABASE_URL}/rest/v1/{table}?{match}",
-        headers=_supa_headers(prefer="return=representation"),
-        json=data
-    )
-    r.raise_for_status()
-    rows = r.json()
-    return rows[0] if rows else None
+    url = f"{SUPABASE_URL}/rest/v1/{table}?{match}"
+    try:
+        r = http_requests.patch(url, headers=_supa_headers(prefer="return=representation"),
+                                json=data, timeout=15)
+        r.raise_for_status()
+        rows = r.json()
+        return rows[0] if rows else None
+    except Exception as e:
+        print(f"[SUPABASE ERROR] PATCH {url}: {e}")
+        raise
 
 
 # ── SQLite helpers (local fallback) ─────────────────────────────────
@@ -106,6 +112,12 @@ def serve_ui():
 @app.route("/api/storage-mode")
 def storage_mode():
     return jsonify({"mode": "supabase" if USE_SUPABASE else "sqlite"})
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    import traceback
+    traceback.print_exc()
+    return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ── Proposals API ───────────────────────────────────────────────────
