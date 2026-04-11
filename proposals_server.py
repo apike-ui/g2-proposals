@@ -1,16 +1,67 @@
 """
 G2 Proposal Builder — standalone Flask server.
-Serves the proposals UI and REST API. No G2 API dependencies needed.
+Serves the proposals UI and REST API.
+Uses Supabase (cloud Postgres) when SUPABASE_URL is set, otherwise SQLite fallback.
 """
 import os, json, sqlite3, uuid, io
+import requests as http_requests
 from flask import Flask, jsonify, send_file, request
+from datetime import datetime, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DB_PATH = os.path.join(_HERE, "data", "proposals.db")
 
+# ── Supabase config ─────────────────────────────────────────────────
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+USE_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
+
 app = Flask(__name__, root_path=_HERE, instance_path=os.path.join(_HERE, "instance"))
 
-# ── DB helpers ──────────────────────────────────────────────────────
+
+# ── Supabase helpers ────────────────────────────────────────────────
+
+def _supa_headers(prefer=None):
+    h = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if prefer:
+        h["Prefer"] = prefer
+    return h
+
+def _supa_get(table, params=""):
+    r = http_requests.get(
+        f"{SUPABASE_URL}/rest/v1/{table}?{params}",
+        headers=_supa_headers()
+    )
+    r.raise_for_status()
+    return r.json()
+
+def _supa_post(table, data):
+    r = http_requests.post(
+        f"{SUPABASE_URL}/rest/v1/{table}",
+        headers=_supa_headers(prefer="return=representation"),
+        json=data
+    )
+    r.raise_for_status()
+    rows = r.json()
+    return rows[0] if rows else None
+
+def _supa_patch(table, match, data):
+    r = http_requests.patch(
+        f"{SUPABASE_URL}/rest/v1/{table}?{match}",
+        headers=_supa_headers(prefer="return=representation"),
+        json=data
+    )
+    r.raise_for_status()
+    rows = r.json()
+    return rows[0] if rows else None
+
+
+# ── SQLite helpers (local fallback) ─────────────────────────────────
+
 def _db():
     conn = sqlite3.connect(_DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -38,79 +89,170 @@ def _init_db():
         )""")
         c.execute("CREATE INDEX IF NOT EXISTS idx_pv_pid ON proposal_versions(proposal_id)")
 
-_init_db()
+if not USE_SUPABASE:
+    _init_db()
+    print("  Storage: SQLite (local) — proposals will NOT persist across deploys")
+else:
+    print(f"  Storage: Supabase (cloud) — proposals persist permanently")
+
 
 # ── UI ──────────────────────────────────────────────────────────────
+
 @app.route("/")
 @app.route("/proposals")
 def serve_ui():
     return send_file(os.path.join(_HERE, "g2-proposals.html"))
 
+@app.route("/api/storage-mode")
+def storage_mode():
+    return jsonify({"mode": "supabase" if USE_SUPABASE else "sqlite"})
+
+
 # ── Proposals API ───────────────────────────────────────────────────
+
 @app.route("/api/proposals", methods=["GET"])
 def list_proposals():
-    with _db() as c:
-        rows = c.execute("""
-            SELECT p.*, COUNT(v.id) as version_count
-            FROM proposals p
-            LEFT JOIN proposal_versions v ON v.proposal_id = p.id
-            GROUP BY p.id
-            ORDER BY p.updated_at DESC
-        """).fetchall()
-    return jsonify({"ok": True, "data": [dict(r) for r in rows]})
+    if USE_SUPABASE:
+        # Get proposals with version count via two queries
+        proposals = _supa_get("proposals", "select=*&order=updated_at.desc")
+        # Get version counts
+        versions = _supa_get("proposal_versions", "select=proposal_id")
+        vc = {}
+        for v in versions:
+            pid = v["proposal_id"]
+            vc[pid] = vc.get(pid, 0) + 1
+        for p in proposals:
+            p["version_count"] = vc.get(p["id"], 0)
+        return jsonify({"ok": True, "data": proposals})
+    else:
+        with _db() as c:
+            rows = c.execute("""
+                SELECT p.*, COUNT(v.id) as version_count
+                FROM proposals p
+                LEFT JOIN proposal_versions v ON v.proposal_id = p.id
+                GROUP BY p.id
+                ORDER BY p.updated_at DESC
+            """).fetchall()
+        return jsonify({"ok": True, "data": [dict(r) for r in rows]})
+
 
 @app.route("/api/proposals", methods=["POST"])
 def create_proposal():
     body = request.get_json(force=True)
     pid = str(uuid.uuid4())
-    with _db() as c:
-        c.execute("INSERT INTO proposals(id,name,customer,rep,grand_total) VALUES(?,?,?,?,?)",
-                  (pid, body.get("name","Untitled"), body.get("customer"), body.get("rep"), body.get("grand_total",0)))
-    with _db() as c:
-        row = c.execute("SELECT * FROM proposals WHERE id=?", (pid,)).fetchone()
-    return jsonify({"ok": True, "data": dict(row)})
+    now = datetime.now(timezone.utc).isoformat()
+
+    if USE_SUPABASE:
+        row = _supa_post("proposals", {
+            "id": pid,
+            "name": body.get("name", "Untitled"),
+            "customer": body.get("customer"),
+            "rep": body.get("rep"),
+            "grand_total": body.get("grand_total", 0),
+            "created_at": now,
+            "updated_at": now,
+        })
+        return jsonify({"ok": True, "data": row})
+    else:
+        with _db() as c:
+            c.execute("INSERT INTO proposals(id,name,customer,rep,grand_total) VALUES(?,?,?,?,?)",
+                      (pid, body.get("name","Untitled"), body.get("customer"), body.get("rep"), body.get("grand_total",0)))
+        with _db() as c:
+            row = c.execute("SELECT * FROM proposals WHERE id=?", (pid,)).fetchone()
+        return jsonify({"ok": True, "data": dict(row)})
+
 
 @app.route("/api/proposals/<pid>", methods=["PUT"])
 def update_proposal(pid):
     body = request.get_json(force=True)
-    with _db() as c:
-        c.execute("UPDATE proposals SET name=?,customer=?,rep=?,grand_total=?,updated_at=datetime('now') WHERE id=?",
-                  (body.get("name"), body.get("customer"), body.get("rep"), body.get("grand_total",0), pid))
-        row = c.execute("SELECT * FROM proposals WHERE id=?", (pid,)).fetchone()
-    return jsonify({"ok": True, "data": dict(row) if row else None})
+    now = datetime.now(timezone.utc).isoformat()
+
+    if USE_SUPABASE:
+        row = _supa_patch("proposals", f"id=eq.{pid}", {
+            "name": body.get("name"),
+            "customer": body.get("customer"),
+            "rep": body.get("rep"),
+            "grand_total": body.get("grand_total", 0),
+            "updated_at": now,
+        })
+        return jsonify({"ok": True, "data": row})
+    else:
+        with _db() as c:
+            c.execute("UPDATE proposals SET name=?,customer=?,rep=?,grand_total=?,updated_at=datetime('now') WHERE id=?",
+                      (body.get("name"), body.get("customer"), body.get("rep"), body.get("grand_total",0), pid))
+            row = c.execute("SELECT * FROM proposals WHERE id=?", (pid,)).fetchone()
+        return jsonify({"ok": True, "data": dict(row) if row else None})
+
 
 @app.route("/api/proposals/<pid>/versions", methods=["GET"])
 def list_versions(pid):
-    with _db() as c:
-        rows = c.execute("SELECT id,proposal_id,notes,created_at FROM proposal_versions WHERE proposal_id=? ORDER BY created_at DESC", (pid,)).fetchall()
-    return jsonify({"ok": True, "data": [dict(r) for r in rows]})
+    if USE_SUPABASE:
+        rows = _supa_get("proposal_versions",
+            f"select=id,proposal_id,notes,created_at&proposal_id=eq.{pid}&order=created_at.desc")
+        return jsonify({"ok": True, "data": rows})
+    else:
+        with _db() as c:
+            rows = c.execute("SELECT id,proposal_id,notes,created_at FROM proposal_versions WHERE proposal_id=? ORDER BY created_at DESC", (pid,)).fetchall()
+        return jsonify({"ok": True, "data": [dict(r) for r in rows]})
+
 
 @app.route("/api/proposals/<pid>/versions", methods=["POST"])
 def create_version(pid):
     body = request.get_json(force=True)
     vid = str(uuid.uuid4())
-    snapshot = json.dumps(body.get("snapshot", {}))
-    with _db() as c:
-        c.execute("INSERT INTO proposal_versions(id,proposal_id,snapshot,notes) VALUES(?,?,?,?)",
-                  (vid, pid, snapshot, body.get("notes")))
-        c.execute("UPDATE proposals SET updated_at=datetime('now') WHERE id=?", (pid,))
-        row = c.execute("SELECT * FROM proposal_versions WHERE id=?", (vid,)).fetchone()
-    return jsonify({"ok": True, "data": dict(row)})
+    snapshot = body.get("snapshot", {})
+    now = datetime.now(timezone.utc).isoformat()
+
+    if USE_SUPABASE:
+        row = _supa_post("proposal_versions", {
+            "id": vid,
+            "proposal_id": pid,
+            "snapshot": snapshot,  # Supabase stores as jsonb natively
+            "notes": body.get("notes"),
+            "created_at": now,
+        })
+        # Update parent proposal timestamp
+        _supa_patch("proposals", f"id=eq.{pid}", {"updated_at": now})
+        return jsonify({"ok": True, "data": row})
+    else:
+        snapshot_str = json.dumps(snapshot)
+        with _db() as c:
+            c.execute("INSERT INTO proposal_versions(id,proposal_id,snapshot,notes) VALUES(?,?,?,?)",
+                      (vid, pid, snapshot_str, body.get("notes")))
+            c.execute("UPDATE proposals SET updated_at=datetime('now') WHERE id=?", (pid,))
+            row = c.execute("SELECT * FROM proposal_versions WHERE id=?", (vid,)).fetchone()
+        return jsonify({"ok": True, "data": dict(row)})
+
 
 @app.route("/api/versions/<vid>", methods=["GET"])
 def get_version(vid):
-    with _db() as c:
-        row = c.execute("SELECT * FROM proposal_versions WHERE id=?", (vid,)).fetchone()
-    if not row:
-        return jsonify({"ok": False, "error": "Not found"}), 404
-    d = dict(row)
-    try:
-        d["snapshot"] = json.loads(d["snapshot"])
-    except Exception:
-        pass
-    return jsonify({"ok": True, "data": d})
+    if USE_SUPABASE:
+        rows = _supa_get("proposal_versions", f"id=eq.{vid}")
+        if not rows:
+            return jsonify({"ok": False, "error": "Not found"}), 404
+        d = rows[0]
+        # snapshot is already a dict from jsonb
+        if isinstance(d.get("snapshot"), str):
+            try:
+                d["snapshot"] = json.loads(d["snapshot"])
+            except Exception:
+                pass
+        return jsonify({"ok": True, "data": d})
+    else:
+        with _db() as c:
+            row = c.execute("SELECT * FROM proposal_versions WHERE id=?", (vid,)).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "Not found"}), 404
+        d = dict(row)
+        try:
+            d["snapshot"] = json.loads(d["snapshot"])
+        except Exception:
+            pass
+        return jsonify({"ok": True, "data": d})
+
 
 # ── PPTX Export ─────────────────────────────────────────────────────
+
 @app.route("/api/proposals/export-pptx", methods=["POST","OPTIONS"])
 def export_pptx():
     if request.method == "OPTIONS":
@@ -125,6 +267,7 @@ def export_pptx():
     filename = f"G2_Proposal_{cust}.pptx"
     return send_file(buf, as_attachment=True, download_name=filename,
                      mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+
 
 if __name__ == "__main__":
     print(f"G2 Proposal Builder → http://localhost:5001/proposals")
