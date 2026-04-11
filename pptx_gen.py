@@ -108,9 +108,10 @@ def _multitext(slide, x, y, w, h, lines, size=12, bold=False, color=NAVY,
     return txBox
 
 
-def _logo(slide, x, y, height, variant="white"):
-    """Insert G2 logo. variant: 'white' or 'red'."""
-    fname = f"G2Logo-{'White' if variant == 'white' else 'Red'}.png"
+def _logo(slide, x, y, height, variant="inverse"):
+    """Insert G2 logo. variant: 'inverse' (rorange on transparent), 'red' (rorange circle), 'white'."""
+    names = {"inverse": "G2Logo-Inverse.png", "red": "G2Logo-Red.png", "white": "G2Logo-Inverse.png"}
+    fname = names.get(variant, "G2Logo-Inverse.png")
     path = os.path.join(ASSETS, fname)
     if os.path.exists(path):
         slide.shapes.add_picture(path, Inches(x), Inches(y),
