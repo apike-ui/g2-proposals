@@ -639,8 +639,69 @@ function BuilderMode({pendingLoad, onLoaded}){
     setRateCardId(id);
     if(!id){setRateCard(null);return;}
     fetch("/api/ratecards/"+id).then(r=>r.json()).then(d=>{
-      if(d.data&&d.data.card_data)setRateCard(d.data.card_data);
+      if(!d.data||!d.data.card_data)return;
+      const rc=d.data.card_data;
+      setRateCard(rc);
     }).catch(()=>{});
+  };
+
+  /* Apply rate card — overrides all pricing and auto-saves a new version */
+  const applyRateCard=async(id)=>{
+    if(!id)return;
+    const r=await fetch("/api/ratecards/"+id);
+    const d=await r.json();
+    if(!d.data||!d.data.card_data)return;
+    const rc=d.data.card_data;
+    const rcMeta=d.data;
+
+    setRateCardId(id);
+    setRateCard(rc);
+
+    /* Override base package rates */
+    setProducts(prev=>prev.map(prod=>{
+      const p={...prod};
+      if(rc.basePkgs&&rc.basePkgs[p.basePkg]){
+        const rcPrice=rc.basePkgs[p.basePkg].price;
+        if(rcPrice!=null&&rcPrice>0)p.baseRate=String(rcPrice);
+      }
+      /* Override addon rates */
+      const newAddons={...p.addons};
+      Object.keys(newAddons).forEach(aid=>{
+        const rcAddon=rc.addons&&rc.addons[aid];
+        if(!rcAddon)return;
+        const addon={...newAddons[aid]};
+        const tierIdx=addon.tierIdx||0;
+        const rcTier=rcAddon.tiers&&rcAddon.tiers[tierIdx];
+        if(rcTier&&rcTier.myPrice!=null&&rcTier.myPrice>0){
+          addon.rate=String(rcTier.myPrice);
+        }
+        /* Remove excluded tiers */
+        if(rcTier&&rcTier.excluded){
+          delete newAddons[aid];return;
+        }
+        newAddons[aid]=addon;
+      });
+      p.addons=newAddons;
+      return p;
+    }));
+
+    /* Auto-save as new version */
+    setTimeout(async()=>{
+      try{
+        const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate,rateCardId:id,rateCardName:rcMeta.name};
+        const totals=computeTotals();
+        const name=proposalName||(cust||"Untitled Proposal");
+        let pid=proposalId;
+        if(!pid){
+          const created=await api.createProposal({name,customer:cust,rep,grand_total:totals.grandTotal});
+          pid=created.id;setProposalId(pid);
+        }else{
+          await api.updateProposal(pid,{name,customer:cust,rep,grand_total:totals.grandTotal});
+        }
+        await api.createVersion(pid,{snapshot:{...snapshot,products,acctItems},notes:"Applied rate card: "+(rcMeta.name||"Untitled")});
+        setSavedMsg(true);setTimeout(()=>setSavedMsg(false),3000);
+      }catch(e){console.error("Auto-save after rate card apply failed:",e);}
+    },100);
   };
 
   const [sub,setSub]=useState("products");
@@ -704,8 +765,10 @@ function BuilderMode({pendingLoad, onLoaded}){
         setCust(s.cust||"");setRep(s.rep||"");
         setProducts(s.products||[mkProduct("Product 1")]);
         setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");
+        setStartDate(s.startDate||"");setEndDate(s.endDate||"");
         setProposalDisc(s.proposalDisc||"");
         setShowProposalDisc(!!s.proposalDisc);
+        if(s.rateCardId){loadRateCard(s.rateCardId);}else{setRateCardId("");setRateCard(null);}
         setProposalId(pendingLoad.proposal.id);
         setProposalName(pendingLoad.proposal.name||"");
       }
@@ -830,7 +893,8 @@ function BuilderMode({pendingLoad, onLoaded}){
   /* Save proposal */
   const doSave=async()=>{
     setSaving(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
+    const rcName=rateCardId?rateCardList.find(function(r){return r.id===rateCardId;}):null;
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate,rateCardId:rateCardId||null,rateCardName:rcName?rcName.name:null};
     const totals=computeTotals();
     const name=proposalName||(cust||"Untitled Proposal");
     try{
@@ -917,7 +981,7 @@ function BuilderMode({pendingLoad, onLoaded}){
       const s=v.snapshot;
       setCust(s.cust||"");setRep(s.rep||"");
       setProducts(s.products||[mkProduct("Product 1")]);
-      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);if(s.rateCardId){loadRateCard(s.rateCardId);}else{setRateCardId("");setRateCard(null);}
       setProposalId(p.id);setProposalName(p.name);
     }
     setShowLoad(false);setSub("products");
@@ -930,7 +994,7 @@ function BuilderMode({pendingLoad, onLoaded}){
       const s=v.snapshot;
       setCust(s.cust||"");setRep(s.rep||"");
       setProducts(s.products||[mkProduct("Product 1")]);
-      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);if(s.rateCardId){loadRateCard(s.rateCardId);}else{setRateCardId("");setRateCard(null);}
       setProposalId(p.id);setProposalName(p.name);
     }
     setHistoryTarget(null);setShowLoad(false);setSub("products");
@@ -940,6 +1004,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   const doNew=()=>{
     setProposalId(null);setProposalName("");setCust("");setRep("");
     setProducts([mkProduct("Product 1")]);setAcctItems({});
+    setRateCardId("");setRateCard(null);
     setContractTerm("12");setStartDate("");setEndDate("");setProposalDisc("");setShowProposalDisc(false);setSub("products");
   };
 
@@ -974,10 +1039,13 @@ function BuilderMode({pendingLoad, onLoaded}){
       </div>
       <div style={{minWidth:160}}>
         <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>RATE CARD</div>
-        <select className="inp" value={rateCardId} onChange={e=>loadRateCard(e.target.value)} style={{width:180,fontSize:12}}>
-          <option value="">List pricing (default)</option>
-          {rateCardList.map(rc=><option key={rc.id} value={rc.id}>{rc.name}{rc.customer?" — "+rc.customer:""}</option>)}
-        </select>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          <select className="inp" value={rateCardId} onChange={e=>loadRateCard(e.target.value)} style={{width:170,fontSize:12}}>
+            <option value="">List pricing (default)</option>
+            {rateCardList.map(rc=><option key={rc.id} value={rc.id}>{rc.name}{rc.customer?" — "+rc.customer:""}</option>)}
+          </select>
+          {rateCardId&&<button className="btn btn-sm btn-grn" style={{fontSize:11,padding:"5px 10px",whiteSpace:"nowrap"}} onClick={()=>applyRateCard(rateCardId)} title="Override all pricing with this rate card and save as new version">Apply</button>}
+        </div>
       </div>
       {(()=>{const t=computeTotals();return <div style={{display:"flex",alignItems:"center",gap:16}}>
         {(showProposalDisc||pn(proposalDisc)>0)&&<div style={{textAlign:"center",borderRight:"1px solid #E2E8F0",paddingRight:16}}>
@@ -1232,6 +1300,7 @@ function BuilderMode({pendingLoad, onLoaded}){
                 <div style={{fontSize:12,color:C.mid}}>{today}</div>
                 <div style={{fontSize:12,color:C.mid,marginTop:2}}>Prepared by: {rep||"G2 Sales"}</div>
                 <div style={{fontSize:12,color:C.mid,marginTop:2}}>Term: {contractTerm&&contractTerm!=="custom"?contractTerm+" months":"Custom"}{startDate||endDate?" | "+(startDate?new Date(startDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"TBD")+" — "+(endDate?new Date(endDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"TBD"):""}</div>
+                {rateCardId&&rateCardList.length>0&&(()=>{const rc=rateCardList.find(function(r){return r.id===rateCardId;});return rc?<div style={{fontSize:12,color:C.blue,fontWeight:600,marginTop:2}}>Rate Card: {rc.name}</div>:null;})()}
                 <div style={{fontSize:11,color:C.mid,marginTop:2}}>Internal Only | Confidential</div>
               </div>
             </div>
