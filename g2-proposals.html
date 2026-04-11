@@ -472,19 +472,26 @@ function HistoryModal({proposal,onClose,onLoadVersion}){
         <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:C.mid,lineHeight:1}}>&times;</button>
       </div>
       <div className="modal-body">
-        {loading&&<div style={{textAlign:"center",padding:"24px 0",color:C.mid,fontSize:13}}>Loading…</div>}
+        {loading&&<div style={{textAlign:"center",padding:"24px 0",color:C.mid,fontSize:13}}>Loading...</div>}
+        {!loading&&versions.length===0&&<div style={{textAlign:"center",padding:"24px 0",color:C.mid,fontSize:13}}>No versions saved yet.</div>}
         {versions.map((v,i)=>{
+          const vNum=v.version_num||(versions.length-i);
           const dt=new Date(v.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+          const isRateCardApply=(v.notes||"").startsWith("Applied rate card:");
           return <div key={v.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #F2F4F7"}}>
-            <div>
+            <div style={{flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontWeight:700,fontSize:13,color:C.navy}}>v{v.version_num}</span>
+                <span style={{fontWeight:700,fontSize:13,color:C.navy}}>v{vNum}</span>
                 {i===0&&<span className="badge badge-new">Latest</span>}
+                {isRateCardApply&&<span className="pill" style={{background:C.blue,fontSize:9}}>Rate Card</span>}
               </div>
-              <div style={{fontSize:12,color:C.mid,marginTop:2}}>{v.notes||"No notes"}</div>
+              <div style={{fontSize:12,color:isRateCardApply?C.blue:C.mid,marginTop:2,fontWeight:isRateCardApply?600:400}}>{v.notes||"No notes"}</div>
               <div style={{fontSize:11,color:"#B0BACA",marginTop:1}}>{dt}</div>
             </div>
-            <button className="btn btn-sm btn-out" onClick={()=>onLoadVersion(proposal,v.id)}>Load</button>
+            <div style={{display:"flex",gap:6}}>
+              <button className="btn btn-sm btn-sec" onClick={()=>onLoadVersion(proposal,v.id)}>View</button>
+              {i>0&&<button className="btn btn-sm btn-out" onClick={()=>onLoadVersion(proposal,v.id)}>Restore</button>}
+            </div>
           </div>;
         })}
       </div>
@@ -771,9 +778,13 @@ function BuilderMode({pendingLoad, onLoaded}){
   useEffect(()=>{
     if(!pendingLoad?.proposal)return;
     (async()=>{
-      const versions=await api.listVersions(pendingLoad.proposal.id);
-      if(versions.length>0){
-        const v=await api.getVersion(versions[0].id);
+      let vid=pendingLoad.versionId;
+      if(!vid){
+        const versions=await api.listVersions(pendingLoad.proposal.id);
+        if(versions.length>0)vid=versions[0].id;
+      }
+      if(vid){
+        const v=await api.getVersion(vid);
         const s=v.snapshot||{};
         setCust(s.cust||"");setRep(s.rep||"");
         setProducts(s.products||[mkProduct("Product 1")]);
@@ -1528,7 +1539,7 @@ function BuilderMode({pendingLoad, onLoaded}){
 /* ================================================================
    PROPOSALS LIBRARY — searchable grid of all saved proposals
    ================================================================ */
-function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard}){
+function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard,onLoadVersion}){
   const [proposals,setProposals]=useState([]);
   const [rateCards,setRateCards]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -1538,6 +1549,7 @@ function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard}){
   const [exportingGSLib,setExportingGSLib]=useState({});
   const [deleteConfirm,setDeleteConfirm]=useState(null);
   const [storageMode,setStorageMode]=useState("unknown");
+  const [historyProp,setHistoryProp]=useState(null);
 
   useEffect(()=>{
     fetch("/api/storage-mode").then(r=>r.json()).then(d=>setStorageMode(d.mode)).catch(()=>{});
@@ -1727,7 +1739,9 @@ function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard}){
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.mid}}>
                   <span style={{width:14,textAlign:"center",flexShrink:0}}>📌</span>
-                  <span>{p.version_count||0} version{(p.version_count||0)!==1?"s":""} saved</span>
+                  {(p.version_count||0)>0
+                    ?<span onClick={function(e){e.stopPropagation();setHistoryProp(p);}} style={{cursor:"pointer",color:C.blue,textDecoration:"underline"}}>{p.version_count} version{p.version_count!==1?"s":""}</span>
+                    :<span>No versions saved</span>}
                 </div>
               </div>
             </div>
@@ -1755,6 +1769,10 @@ function ProposalsLibrary({onEdit,onView,onNew,onEditRateCard,onNewRateCard}){
       </div></div>}
       </div>;
     })()}
+
+    {/* Version History Modal */}
+    {historyProp&&<HistoryModal proposal={historyProp} onClose={()=>setHistoryProp(null)}
+      onLoadVersion={(p,vid)=>{setHistoryProp(null);onLoadVersion(p,vid);}}/>}
   </div>;
 }
 
@@ -2079,6 +2097,7 @@ function App(){
   const goNew=()=>{setPendingLoad(null);setMode("builder");};
   const goEditRateCard=(rc)=>{setPendingRateCard(rc);setMode("ratecard");};
   const goNewRateCard=()=>{setPendingRateCard(null);setMode("ratecard");};
+  const goLoadVersion=(p,vid)=>{setPendingLoad({proposal:p,sub:"preview",versionId:vid});setMode("builder");};
 
   return <div style={{minHeight:"100vh",background:C.light}}>
     <div style={{background:C.navy,padding:"20px 0 20px"}} className="no-print">
@@ -2105,7 +2124,7 @@ function App(){
       </div>
     </div>
     <div className="ctr" style={{paddingTop:28,paddingBottom:48}}>
-      {mode==="proposals"&&<ProposalsLibrary onEdit={goEdit} onView={goView} onNew={goNew} onEditRateCard={goEditRateCard} onNewRateCard={goNewRateCard}/>}
+      {mode==="proposals"&&<ProposalsLibrary onEdit={goEdit} onView={goView} onNew={goNew} onEditRateCard={goEditRateCard} onNewRateCard={goNewRateCard} onLoadVersion={goLoadVersion}/>}
       {mode==="ratecard"&&<RateCardMode initialRateCard={pendingRateCard} onDone={()=>{setPendingRateCard(null);setMode("proposals");}}/>}
       {mode==="suite"&&<SuiteMode/>}
       {mode==="builder"&&<BuilderMode pendingLoad={pendingLoad} onLoaded={()=>setPendingLoad(null)}/>}
