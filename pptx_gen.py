@@ -268,9 +268,12 @@ def slide_cover(prs, data):
           "Custom Investment Summary  |  G2 Buyer Intelligence Platform",
           size=16, color=BORDER_GREY, align=PP_ALIGN.LEFT)
 
-    # Rep + date
+    # Rep, date, term, valid through
     rep = data.get("rep") or ""
     today = data.get("date") or date.today().strftime("%B %d, %Y")
+    contract_term = data.get("contractTerm") or "12"
+    valid_through = data.get("validThrough") or ""
+
     info_y = 4.4
     if rep:
         _text(slide, 0.7, info_y, 6, 0.35, f"Prepared by  {rep}",
@@ -278,6 +281,24 @@ def slide_cover(prs, data):
         info_y += 0.4
     _text(slide, 0.7, info_y, 6, 0.35, today,
           size=13, color=MID_TEXT, align=PP_ALIGN.LEFT)
+    info_y += 0.4
+
+    # Contract term
+    term_str = f"{contract_term}-month term" if contract_term and contract_term != "custom" else "Custom term"
+    _text(slide, 0.7, info_y, 6, 0.35, term_str,
+          size=13, color=MID_TEXT, align=PP_ALIGN.LEFT)
+
+    # Valid through date
+    if valid_through:
+        info_y += 0.4
+        try:
+            from datetime import datetime
+            vt = datetime.strptime(valid_through, "%Y-%m-%d")
+            vt_str = f"Valid through {vt.strftime('%B %d, %Y')}"
+        except Exception:
+            vt_str = f"Valid through {valid_through}"
+        _text(slide, 0.7, info_y, 6, 0.35, vt_str,
+              size=13, bold=True, color=RORANGE, align=PP_ALIGN.LEFT)
 
     # Right-side proof point cards
     card_x = 9.0
