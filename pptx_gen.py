@@ -349,7 +349,7 @@ def slide_summary(prs, data, totals):
 
     # Stat cards row
     card_data = [
-        ("Total ACV",     fmt_money(totals["total_net"]),    RORANGE, WHITE),
+        ("Total ACV",     fmt_money(totals["total_net"]),    BLUE,    WHITE),
         ("List Price",    fmt_money(totals["total_list"]),   NAVY,    WHITE),
         ("Products",      str(totals["num_products"]),       PURPLE,  WHITE),
         ("Your Savings",  fmt_money(totals["total_savings"]),GREEN,   WHITE),
@@ -432,7 +432,7 @@ def slide_summary(prs, data, totals):
 
         # ACV
         _text(slide, tx + tw - col_acv, ry + 0.04, col_acv - 0.15, row_h - 0.08,
-              fmt_money(ps["prod_net"]), size=10, bold=True, color=RORANGE,
+              fmt_money(ps["prod_net"]), size=10, bold=True, color=BLUE,
               align=PP_ALIGN.RIGHT)
 
         ry += row_h
@@ -483,7 +483,7 @@ def slide_product(prs, data, prod_summary, page_num):
           size=10, bold=True, color=MID_TEXT)
     acv = fmt_money(prod_summary.get("prod_net", 0))
     _text(slide, left_x + 0.3, 2.2, 4, 0.7, acv,
-          size=40, bold=True, color=RORANGE)
+          size=40, bold=True, color=BLUE)
 
     list_p = prod_summary.get("prod_list", 0)
     net_p = prod_summary.get("prod_net", 0)
@@ -509,7 +509,7 @@ def slide_product(prs, data, prod_summary, page_num):
                   size=12, bold=True, color=NAVY)
             _text(slide, left_x + left_w - 1.6, ay + 0.08, 1.4, 0.3,
                   f"{fmt_money(addon_price)}/yr",
-                  size=12, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
+                  size=12, bold=True, color=BLUE, align=PP_ALIGN.RIGHT)
 
     # Right column — value propositions
     right_x = 6.8
@@ -588,7 +588,7 @@ def slide_pricing_table(prs, data, totals, page_num):
         if is_discount:
             _rect(slide, margin_x, row_y, 0.05, row_h, RORANGE)
 
-        label_color = RORANGE if is_discount else (MID_TEXT if is_indent else NAVY)
+        label_color = GREEN if is_discount else (MID_TEXT if is_indent else NAVY)
         label_weight = not is_indent and not is_discount
         label_x = margin_x + (0.5 if is_indent else 0.2)
 
@@ -600,7 +600,7 @@ def slide_pricing_table(prs, data, totals, page_num):
                   fmt_money(list_price), size=11, color=MID_TEXT, align=PP_ALIGN.CENTER)
 
         if net_price != 0:
-            val_color = RORANGE if is_discount else NAVY
+            val_color = GREEN if is_discount else NAVY
             net_str = f"-{fmt_money(abs(net_price))}" if is_discount else fmt_money(net_price)
             _text(slide, margin_x + col_item + col_list, row_y + 0.06,
                   col_net, row_h - 0.12, net_str,
@@ -627,7 +627,7 @@ def slide_pricing_table(prs, data, totals, page_num):
           "Total Annual Contract Value", size=14, bold=True, color=WHITE)
     _text(slide, margin_x + col_item + col_list, total_y + 0.18,
           col_net, 0.35, fmt_money(totals["total_net"]),
-          size=16, bold=True, color=RORANGE, align=PP_ALIGN.CENTER)
+          size=16, bold=True, color=BLUE, align=PP_ALIGN.CENTER)
 
     # Savings callout
     if totals["total_savings"] > 0:
@@ -708,7 +708,7 @@ def slide_cost_by_year(prs, data, totals, page_num):
         _text(slide, mx + col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
               fmt_money(yr_total), size=12, color=NAVY, align=PP_ALIGN.RIGHT)
         _text(slide, mx + 2 * col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
-              fmt_money(yr_total), size=12, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
+              fmt_money(yr_total), size=12, bold=True, color=BLUE, align=PP_ALIGN.RIGHT)
         _text(slide, mx + 3 * col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
               fmt_money(cumulative), size=12, color=NAVY, align=PP_ALIGN.RIGHT)
 
@@ -720,7 +720,7 @@ def slide_cost_by_year(prs, data, totals, page_num):
           f"Total Contract Value ({years} year{'s' if years > 1 else ''})",
           size=14, bold=True, color=WHITE)
     _text(slide, mx + 2 * col_w + 0.15, ry + 0.18, col_w - 0.3, 0.35,
-          fmt_money(cumulative), size=16, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
+          fmt_money(cumulative), size=16, bold=True, color=BLUE, align=PP_ALIGN.RIGHT)
 
     _footer(slide, page_num=page_num)
     return True

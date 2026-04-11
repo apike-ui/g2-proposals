@@ -427,7 +427,7 @@ function LoadModal({onClose,onLoad,onViewHistory}){
                 </div>
               </div>
               <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
-                {p.grand_total>0&&<div style={{fontWeight:700,fontSize:13,color:C.rorange}}>{fmt(p.grand_total)}</div>}
+                {p.grand_total>0&&<div style={{fontWeight:700,fontSize:13,color:C.blue}}>{fmt(p.grand_total)}</div>}
                 <div style={{fontSize:11,color:C.mid,marginTop:2}}>{updated}</div>
                 <button onClick={e=>{e.stopPropagation();onViewHistory(p);}}
                   style={{marginTop:4,background:"none",border:"none",cursor:"pointer",fontSize:11,color:C.blue,textDecoration:"underline",padding:0}}>
@@ -907,7 +907,7 @@ function BuilderMode({pendingLoad, onLoaded}){
               style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:10,color:C.mid,padding:"1px 6px",whiteSpace:"nowrap"}}>+ disc</button>}
           </div>
           {pn(proposalDisc)>0&&<div style={{fontSize:12,color:"#B0BACA",textDecoration:"line-through"}}>{fmt(t.totalAcv)}</div>}
-          <div style={{fontSize:22,fontWeight:800,color:C.rorange}}>{fmt(t.grandTotal)}</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.blue}}>{fmt(t.grandTotal)}</div>
           <div style={{fontSize:11,color:C.mid}}>{products.length} product{products.length>1?"s":""} | ACV {fmt(t.finalAcv)}</div>
         </div>
       </div>;})()}
@@ -1119,7 +1119,7 @@ function BuilderMode({pendingLoad, onLoaded}){
                 <span style={{fontSize:16,fontWeight:800,color:C.navy}}>Total Annual Investment</span>
                 {parseInt(contractTerm)>12&&<span style={{fontSize:12,color:C.mid,marginLeft:8}}>({fmt(grandTotal*Math.ceil(parseInt(contractTerm)/12))} total contract value)</span>}
               </div>
-              <span style={{fontSize:28,fontWeight:800,color:C.rorange}}>{fmt(grandTotal)}/yr</span>
+              <span style={{fontSize:28,fontWeight:800,color:C.blue}}>{fmt(grandTotal)}/yr</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
               <div style={{background:"#fff",borderRadius:6,padding:"10px 14px",textAlign:"center",border:"1px solid #E2E8F0"}}>
@@ -1223,12 +1223,12 @@ function BuilderMode({pendingLoad, onLoaded}){
                     <div style={{padding:"0 10px",fontWeight:700,fontSize:12,color:C.navy}}>{"Year "+yr.year}{yr.partial?" ("+yr.months+"mo)":""}</div>
                     <div style={{padding:"0 10px",textAlign:"right",fontSize:12,color:C.navy}}>{fmt(yr.acv)}</div>
                     <div style={{padding:"0 10px",textAlign:"right",fontSize:12,color:C.mid}}>{fmt(yr.nonAcv)}</div>
-                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:700,fontSize:12,color:C.rorange}}>{fmt(yr.total)}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:700,fontSize:12,color:C.blue}}>{fmt(yr.total)}</div>
                     <div style={{padding:"0 10px",textAlign:"right",fontWeight:600,fontSize:12,color:C.navy}}>{fmt(yr.cumulative)}</div>
                   </div>;})}
                   <div style={{display:"grid",gridTemplateColumns:"5.5fr 2fr 2fr",padding:"8px 0",borderTop:"2px solid "+C.navy,background:C.navy}}>
                     <div style={{padding:"0 10px",fontWeight:700,fontSize:12,color:"#fff"}}>Total Contract Value ({years} year{years>1?"s":""})</div>
-                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:800,fontSize:14,color:C.rorange}}>{fmt(cumulative)}</div>
+                    <div style={{padding:"0 10px",textAlign:"right",fontWeight:800,fontSize:14,color:C.blue}}>{fmt(cumulative)}</div>
                     <div style={{padding:"0 10px"}}></div>
                   </div>
                 </div>
