@@ -272,7 +272,7 @@ function Pill({color,children}){return <span className="pill" style={{background
 function Toggle({on,onChange}){return <div className={`tgl ${on?"yes":"no"}`} onClick={()=>onChange(!on)}><div className="tgl-k" style={{left:on?20:2}}/></div>}
 function SectionTitle({children,sub}){return <div style={{marginBottom:16}}><h2 style={{fontSize:20,fontWeight:700,color:C.navy,letterSpacing:"-.3px"}}>{children}</h2>{sub&&<p style={{fontSize:13,color:C.mid,marginTop:4}}>{sub}</p>}</div>}
 
-function mkProduct(name){return{id:mkId(),name:name||"Product "+(_pid-1),basePkg:"professional",baseRate:"",baseDisc:"",addons:{}};}
+function mkProduct(name){return{id:mkId(),name:name||"Product "+(_pid-1),basePkg:"free",baseRate:"",baseDisc:"",addons:{}};}
 const calcDisc=(rate,list)=>list>0?Math.round((1-pn(rate)/list)*1000)/10:0;
 const calcRate=(disc,list)=>Math.round(list*(1-pn(disc)/100));
 
@@ -622,8 +622,35 @@ function BuilderMode({pendingLoad, onLoaded}){
   const [discOpen,setDiscOpen]=useState({});  // tracks which discount fields are expanded: "base" | addonId
   const toggleDisc=(key)=>setDiscOpen(prev=>({...prev,[key]:!prev[key]}));
   const [contractTerm,setContractTerm]=useState("12");  // contract term in months
-  const [validThrough,setValidThrough]=useState("");   // valid through date (YYYY-MM-DD)
+  const [startDate,setStartDate]=useState("");         // contract start (YYYY-MM-DD)
+  const [endDate,setEndDate]=useState("");             // contract end (YYYY-MM-DD)
   const [proposalDisc,setProposalDisc]=useState("");   // proposal-level discount %
+
+  /* Auto-calc: add N months to a YYYY-MM-DD string */
+  const addMonths=(dateStr,months)=>{
+    if(!dateStr)return"";
+    const d=new Date(dateStr+"T00:00:00");
+    d.setMonth(d.getMonth()+parseInt(months));
+    return d.toISOString().slice(0,10);
+  };
+  /* Compute month diff between two YYYY-MM-DD strings */
+  const monthDiff=(a,b)=>{
+    if(!a||!b)return"";
+    const da=new Date(a+"T00:00:00"),db=new Date(b+"T00:00:00");
+    return (db.getFullYear()-da.getFullYear())*12+(db.getMonth()-da.getMonth());
+  };
+  const handleTermChange=(val)=>{
+    setContractTerm(val);
+    if(startDate&&val&&val!=="custom"){setEndDate(addMonths(startDate,val));}
+  };
+  const handleStartChange=(val)=>{
+    setStartDate(val);
+    if(val&&contractTerm&&contractTerm!=="custom"){setEndDate(addMonths(val,contractTerm));}
+  };
+  const handleEndChange=(val)=>{
+    setEndDate(val);
+    if(startDate&&val){const m=monthDiff(startDate,val);if([6,12,24,36].includes(m)){setContractTerm(String(m));}else{setContractTerm("custom");}}
+  };
   const [showProposalDisc,setShowProposalDisc]=useState(false);
   const [proposalName,setProposalName]=useState("");
   const [saveNote,setSaveNote]=useState("");
@@ -707,7 +734,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   /* Save proposal */
   const doSave=async()=>{
     setSaving(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,validThrough};
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
     const totals=computeTotals();
     const name=proposalName||(cust||"Untitled Proposal");
     try{
@@ -730,7 +757,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   const [exporting,setExporting]=useState(false);
   const doExportPptx=async()=>{
     setExporting(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,validThrough};
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
     try{
       const r=await fetch("/api/proposals/export-pptx",{
         method:"POST",
@@ -755,7 +782,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   const doExportGoogleSlides=async()=>{
     if(!GOOGLE_CLIENT_ID){setGsSetupOpen(true);return;}
     setExportingGS(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,validThrough};
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
     try{
       /* Step 1 — get PPTX bytes from server */
       const pptxRes=await fetch("/api/proposals/export-pptx",{
@@ -794,7 +821,7 @@ function BuilderMode({pendingLoad, onLoaded}){
       const s=v.snapshot;
       setCust(s.cust||"");setRep(s.rep||"");
       setProducts(s.products||[mkProduct("Product 1")]);
-      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setValidThrough(s.validThrough||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
       setProposalId(p.id);setProposalName(p.name);
     }
     setShowLoad(false);setSub("products");
@@ -807,7 +834,7 @@ function BuilderMode({pendingLoad, onLoaded}){
       const s=v.snapshot;
       setCust(s.cust||"");setRep(s.rep||"");
       setProducts(s.products||[mkProduct("Product 1")]);
-      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setValidThrough(s.validThrough||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
+      setAcctItems(s.acctItems||{});setContractTerm(s.contractTerm||"12");setStartDate(s.startDate||s.validThrough||"");setEndDate(s.endDate||"");setProposalDisc(s.proposalDisc||"");setShowProposalDisc(!!s.proposalDisc);
       setProposalId(p.id);setProposalName(p.name);
     }
     setHistoryTarget(null);setShowLoad(false);setSub("products");
@@ -817,7 +844,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   const doNew=()=>{
     setProposalId(null);setProposalName("");setCust("");setRep("");
     setProducts([mkProduct("Product 1")]);setAcctItems({});
-    setContractTerm("12");setValidThrough("");setProposalDisc("");setShowProposalDisc(false);setSub("products");
+    setContractTerm("12");setStartDate("");setEndDate("");setProposalDisc("");setShowProposalDisc(false);setSub("products");
   };
 
   return <div>
@@ -833,22 +860,21 @@ function BuilderMode({pendingLoad, onLoaded}){
       </div>
       <div style={{minWidth:100}}>
         <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>TERM</div>
-        <select className="inp" value={contractTerm} onChange={e=>setContractTerm(e.target.value)} style={{width:120,fontSize:13}}>
+        <select className="inp" value={contractTerm} onChange={e=>handleTermChange(e.target.value)} style={{width:120,fontSize:13}}>
+          <option value="6">6 months</option>
           <option value="12">12 months</option>
           <option value="24">24 months</option>
           <option value="36">36 months</option>
-          <option value="6">6 months</option>
           <option value="custom">Custom</option>
         </select>
       </div>
-      {contractTerm==="custom"&&<div style={{minWidth:80}}>
-        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>MONTHS</div>
-        <input type="number" className="inp" min="1" max="60" style={{width:70,textAlign:"center",fontSize:13}}
-          value={""} placeholder="##" onChange={e=>setContractTerm(e.target.value||"custom")}/>
-      </div>}
       <div style={{minWidth:130}}>
-        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>VALID THROUGH</div>
-        <input type="date" className="inp" value={validThrough} onChange={e=>setValidThrough(e.target.value)} style={{width:150,fontSize:13}}/>
+        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>START DATE</div>
+        <input type="date" className="inp" value={startDate} onChange={e=>handleStartChange(e.target.value)} style={{width:150,fontSize:13}}/>
+      </div>
+      <div style={{minWidth:130}}>
+        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>END DATE</div>
+        <input type="date" className="inp" value={endDate} onChange={e=>handleEndChange(e.target.value)} style={{width:150,fontSize:13}}/>
       </div>
       {(()=>{const t=computeTotals();return <div style={{display:"flex",alignItems:"center",gap:16}}>
         {(showProposalDisc||pn(proposalDisc)>0)&&<div style={{textAlign:"center",borderRight:"1px solid #E2E8F0",paddingRight:16}}>
@@ -1070,7 +1096,7 @@ function BuilderMode({pendingLoad, onLoaded}){
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:12,color:C.mid}}>{today}</div>
                 <div style={{fontSize:12,color:C.mid,marginTop:2}}>Prepared by: {rep||"G2 Sales"}</div>
-                <div style={{fontSize:12,color:C.mid,marginTop:2}}>Term: {contractTerm&&contractTerm!=="custom"?contractTerm+" months":"TBD"}{validThrough?" | Valid through: "+new Date(validThrough+"T00:00:00").toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}):""}</div>
+                <div style={{fontSize:12,color:C.mid,marginTop:2}}>Term: {contractTerm&&contractTerm!=="custom"?contractTerm+" months":"Custom"}{startDate||endDate?" | "+(startDate?new Date(startDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"TBD")+" — "+(endDate?new Date(endDate+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"TBD"):""}</div>
                 <div style={{fontSize:11,color:C.mid,marginTop:2}}>Internal Only | Confidential</div>
               </div>
             </div>

@@ -272,7 +272,8 @@ def slide_cover(prs, data):
     rep = data.get("rep") or ""
     today = data.get("date") or date.today().strftime("%B %d, %Y")
     contract_term = data.get("contractTerm") or "12"
-    valid_through = data.get("validThrough") or ""
+    start_date = data.get("startDate") or ""
+    end_date = data.get("endDate") or ""
 
     info_y = 4.4
     if rep:
@@ -288,16 +289,19 @@ def slide_cover(prs, data):
     _text(slide, 0.7, info_y, 6, 0.35, term_str,
           size=13, color=MID_TEXT, align=PP_ALIGN.LEFT)
 
-    # Valid through date
-    if valid_through:
-        info_y += 0.4
+    # Contract dates
+    def _fmt_date(ds):
         try:
-            from datetime import datetime
-            vt = datetime.strptime(valid_through, "%Y-%m-%d")
-            vt_str = f"Valid through {vt.strftime('%B %d, %Y')}"
+            from datetime import datetime as dt
+            return dt.strptime(ds, "%Y-%m-%d").strftime("%b %d, %Y")
         except Exception:
-            vt_str = f"Valid through {valid_through}"
-        _text(slide, 0.7, info_y, 6, 0.35, vt_str,
+            return ds
+
+    if start_date or end_date:
+        info_y += 0.4
+        sd = _fmt_date(start_date) if start_date else "TBD"
+        ed = _fmt_date(end_date) if end_date else "TBD"
+        _text(slide, 0.7, info_y, 6, 0.35, f"{sd}  —  {ed}",
               size=13, bold=True, color=RORANGE, align=PP_ALIGN.LEFT)
 
     # Right-side proof point cards
