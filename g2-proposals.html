@@ -797,10 +797,34 @@ function BuilderMode({pendingLoad, onLoaded}){
       const d=acctItems[id];const rate=pn(d.rate)||cat.list;const qty=d.qty||1;const total=rate*qty;
       totalNonAcv+=total;nonAcvLines.push({name:cat.name,qty,rate,total});
     });
+    /* Rate card discount rules */
+    const termM=parseInt(contractTerm)||12;
+    let rcDiscAmt=0;const rcDiscLines=[];
+    if(rateCard&&rateCard.discountRules){
+      rateCard.discountRules.forEach(function(rule){
+        const dp=pn(rule.discPct);if(dp<=0)return;
+        const termReq=rule.termMonths==="any"?0:parseInt(rule.termMonths)||0;
+        if(termM<termReq)return;
+        const skus=rule.skus||[];if(skus.length===0)return;
+        /* Calculate discount amount for matching SKUs */
+        let ruleAmt=0;
+        /* Base packages */
+        prodSummaries.forEach(function(ps){
+          if(ps.basePkg&&skus.includes("base_"+ps.basePkg.id)){ruleAmt+=ps.baseRate*dp/100;}
+          ps.addonLines.forEach(function(al){
+            const addonCat=ADDON_CATALOG.find(function(a){return a.name===al.name;});
+            if(addonCat&&skus.includes("addon_"+addonCat.id)){ruleAmt+=al.total*dp/100;}
+          });
+        });
+        ruleAmt=Math.round(ruleAmt);
+        if(ruleAmt>0){rcDiscAmt+=ruleAmt;rcDiscLines.push({name:rule.name||"Rate card discount",pct:dp,amount:ruleAmt,termReq:termReq});}
+      });
+    }
+
     const propDiscPct=pn(proposalDisc);
     const propDiscAmt=propDiscPct>0?Math.round(totalAcv*propDiscPct/100):0;
-    const finalAcv=totalAcv-propDiscAmt;
-    return{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,finalAcv,grandTotal:finalAcv+totalNonAcv};
+    const finalAcv=totalAcv-propDiscAmt-rcDiscAmt;
+    return{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,rcDiscAmt,rcDiscLines,finalAcv,grandTotal:finalAcv+totalNonAcv};
   };
 
   /* Save proposal */
@@ -1154,7 +1178,7 @@ function BuilderMode({pendingLoad, onLoaded}){
 
     {/* PREVIEW TAB */}
     {sub==="preview"&&(()=>{
-      const{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,finalAcv,grandTotal}=computeTotals();
+      const{prodSummaries,totalAcv,totalList,nonAcvLines,totalNonAcv,propDiscPct,propDiscAmt,rcDiscAmt,rcDiscLines,finalAcv,grandTotal}=computeTotals();
       const today=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
       return <div>
         <div className="no-print" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
@@ -1245,7 +1269,7 @@ function BuilderMode({pendingLoad, onLoaded}){
                 <span style={{fontSize:12,fontWeight:700,color:"#1a6b5e"}}>Customer Savings</span>
               </div>
               <div style={{textAlign:"right"}}>
-                {(()=>{const totalSavings=(totalList-totalAcv)+propDiscAmt;const listBase=totalList||totalAcv;const pct=listBase>0?Math.round(totalSavings/listBase*100):0;
+                {(()=>{const totalSavings=(totalList-totalAcv)+propDiscAmt+rcDiscAmt;const listBase=totalList||totalAcv;const pct=listBase>0?Math.round(totalSavings/listBase*100):0;
                   return <><span style={{fontWeight:800,fontSize:14,color:"#1a6b5e"}}>{fmt(totalSavings)} off</span>
                     {pct>0&&<span style={{fontSize:11,color:"#2a8a76",marginLeft:6}}>({pct}%)</span>}
                     <span style={{fontSize:11,color:"#2a8a76",textDecoration:"line-through",marginLeft:6}}>{fmt(listBase)} list</span></>;
@@ -1255,6 +1279,10 @@ function BuilderMode({pendingLoad, onLoaded}){
             {propDiscAmt>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.green,fontWeight:600,padding:"4px 0"}}>
               <span>Proposal Discount ({propDiscPct}%)</span><span>-{fmt(propDiscAmt)}</span>
             </div>}
+            {rcDiscLines&&rcDiscLines.map(function(dl,di){return <div key={di} style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.blue,fontWeight:600,padding:"4px 0"}}>
+              <span>{dl.name} ({dl.pct}%{dl.termReq>0?" @ "+dl.termReq+"mo+":""})</span><span>-{fmt(dl.amount)}</span>
+            </div>;})}
+
             {/* SKU Summary Table (div-based) */}
             <div style={{marginTop:8}}>
               <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>SKU Summary by Profile</div>
@@ -1374,6 +1402,10 @@ function BuilderMode({pendingLoad, onLoaded}){
             <div><span style={{fontWeight:700,fontSize:14,color:C.green}}>Proposal Discount ({propDiscPct}%)</span></div>
             <span style={{fontWeight:700,fontSize:14,color:C.green}}>-{fmt(propDiscAmt)}</span>
           </div>}
+          {rcDiscLines&&rcDiscLines.map(function(dl,di){return <div key={di} className="sline">
+            <div><span style={{fontWeight:700,fontSize:14,color:C.blue}}>{dl.name} ({dl.pct}%)</span>{dl.termReq>0&&<div style={{fontSize:11,color:C.mid,marginTop:2}}>Applied for {dl.termReq}+ month term</div>}</div>
+            <span style={{fontWeight:700,fontSize:14,color:C.blue}}>-{fmt(dl.amount)}</span>
+          </div>;})}
           <div style={{marginTop:32,paddingTop:16,borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
             <span style={{fontSize:10,color:"#B0BACA"}}>G2.com | FY27 Pricing | Internal Only | Confidential</span>
             <span style={{fontSize:10,color:"#B0BACA"}}>Prepared {today}</span>
@@ -1646,7 +1678,7 @@ function RateCardEditor({card,setCard,rcName,setRcName,rcCustomer,setRcCustomer,
 
   const updateBasePkg=(id,price)=>{setCard(prev=>({...prev,basePkgs:{...prev.basePkgs,[id]:{...prev.basePkgs[id],price:pn(price)}}}));};
   const updateAddonTier=(addonId,tierIdx,field,val)=>{
-    setCard(prev=>{const a={...prev.addons};const t=[...(a[addonId]?.tiers||[])];t[tierIdx]={...t[tierIdx],[field]:field==="label"?val:pn(val)};a[addonId]={...a[addonId],tiers:t};return{...prev,addons:a};});
+    setCard(prev=>{const a={...prev.addons};const t=[...(a[addonId]?.tiers||[])];t[tierIdx]={...t[tierIdx],[field]:field==="label"||field==="excluded"?val:pn(val)};a[addonId]={...a[addonId],tiers:t};return{...prev,addons:a};});
   };
   const addVolDisc=(addonId)=>{setCard(prev=>{const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[]),{minProducts:2,discPct:5}];a[addonId]={...a[addonId],volumeDisc:vd};return{...prev,addons:a};});};
   const updateVolDisc=(addonId,idx,field,val)=>{setCard(prev=>{const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[])];vd[idx]={...vd[idx],[field]:pn(val)};a[addonId]={...a[addonId],volumeDisc:vd};return{...prev,addons:a};});};
@@ -1711,20 +1743,22 @@ function RateCardEditor({card,setCard,rcName,setRcName,rcCustomer,setRcCustomer,
             <span style={{fontSize:14,color:C.mid,transform:isOpen?"rotate(180deg)":"none",transition:"transform .15s"}}>{"\u25BC"}</span>
           </div>
           {isOpen&&<div style={{padding:"10px 20px",background:addon.tint||"#F8FAFC"}}>
-            <div style={{display:"grid",gridTemplateColumns:addon.catPricing?"3fr 1fr 0.8fr 1fr 0.6fr":"3fr 1fr 1fr 1fr",gap:4,marginBottom:2}}>
+            <div style={{display:"grid",gridTemplateColumns:addon.catPricing?"0.4fr 3fr 1fr 0.8fr 1fr 0.6fr":"0.4fr 3fr 1fr 1fr 1fr",gap:4,marginBottom:2}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"center"}}></div>
               <div style={{fontSize:9,fontWeight:600,color:C.mid}}>Tier</div>
               <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>List</div>
               {addon.catPricing&&<div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"center"}}>Categories</div>}
               <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>My Rate</div>
               <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>Disc</div>
             </div>
-            {myAddon.tiers.map((tier,ti)=>{const disc=tier.listPrice>0&&tier.myPrice!==tier.listPrice?calcDisc(tier.myPrice,tier.listPrice):0;
-              return <div key={ti} style={{display:"grid",gridTemplateColumns:addon.catPricing?"3fr 1fr 0.8fr 1fr 0.6fr":"3fr 1fr 1fr 1fr",gap:4,padding:"3px 0",borderTop:"1px solid #E2E8F0",alignItems:"center"}}>
-                <div style={{fontSize:11,color:C.navy}}>{tier.label}</div>
+            {myAddon.tiers.map((tier,ti)=>{const disc=tier.listPrice>0&&tier.myPrice!==tier.listPrice&&!tier.excluded?calcDisc(tier.myPrice,tier.listPrice):0;
+              return <div key={ti} style={{display:"grid",gridTemplateColumns:addon.catPricing?"0.4fr 3fr 1fr 0.8fr 1fr 0.6fr":"0.4fr 3fr 1fr 1fr 1fr",gap:4,padding:"3px 0",borderTop:"1px solid #E2E8F0",alignItems:"center",opacity:tier.excluded?0.4:1}}>
+                <div style={{textAlign:"center"}}><input type="checkbox" checked={!tier.excluded} onChange={e=>updateAddonTier(addon.id,ti,"excluded",!e.target.checked)} title={tier.excluded?"Excluded — check to include":"Included — uncheck to exclude"} style={{margin:0}}/></div>
+                <div style={{fontSize:11,color:tier.excluded?C.mid:C.navy,textDecoration:tier.excluded?"line-through":"none"}}>{tier.label}</div>
                 <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{tier.listPrice>0?fmt(tier.listPrice):"Custom"}</div>
                 {addon.catPricing&&<input type="number" className="inp" min="1" style={{width:"100%",textAlign:"center",fontSize:11,padding:"3px 4px"}} value={tier.catCount||""} placeholder="1"
-                  onChange={e=>updateAddonTier(addon.id,ti,"catCount",e.target.value)}/>}
-                <input type="number" className="inp" style={{width:"100%",textAlign:"right",fontSize:11,padding:"3px 5px"}} value={tier.myPrice||""} placeholder={tier.listPrice||"0"} onChange={e=>updateAddonTier(addon.id,ti,"myPrice",e.target.value)}/>
+                  onChange={e=>updateAddonTier(addon.id,ti,"catCount",e.target.value)} disabled={!!tier.excluded}/>}
+                <input type="number" className="inp" style={{width:"100%",textAlign:"right",fontSize:11,padding:"3px 5px"}} value={tier.myPrice||""} placeholder={tier.listPrice||"0"} onChange={e=>updateAddonTier(addon.id,ti,"myPrice",e.target.value)} disabled={!!tier.excluded}/>
                 {disc>0?<div style={{fontSize:10,color:C.green,fontWeight:600,textAlign:"right"}}>{disc}%</div>:<div/>}
               </div>;})}
             {addon.catPricing&&<div style={{marginTop:12,paddingTop:10,borderTop:"2px solid #E2E8F0"}}>
@@ -1764,6 +1798,81 @@ function RateCardEditor({card,setCard,rcName,setRcName,rcCustomer,setRcCustomer,
           <div style={{flex:1}}><span style={{fontWeight:600,fontSize:12,color:C.navy}}>{item.name}</span></div>
           <div style={{fontSize:11,color:C.mid}}>{item.list>0?fmt(item.list):"Var"}</div>
           <input type="number" className="inp inp-r" value={myPrice||""} placeholder={item.list||"0"} onChange={e=>updateNonAcv(item.id,e.target.value)} style={{width:90,fontSize:12}}/>
+        </div>;
+      })}
+    </div>
+
+    {/* Discount Rules */}
+    <div className="card" style={{overflow:"hidden",marginBottom:20}}>
+      <div style={{background:C.green,padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{color:"#fff",fontWeight:700,fontSize:13}}>Discount Rules</span>
+        <button className="btn btn-sm" style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"none",fontSize:11}} onClick={()=>{
+          setCard(prev=>({...prev,discountRules:[...(prev.discountRules||[]),{id:Date.now(),name:"",discPct:"",termMonths:"any",skus:[]}]}));
+        }}>+ Add Rule</button>
+      </div>
+      {(!card.discountRules||card.discountRules.length===0)&&<div style={{padding:"20px",textAlign:"center",fontSize:12,color:C.mid}}>
+        No discount rules. Add a rule to automatically apply discounts based on term length and selected SKUs.
+      </div>}
+      {(card.discountRules||[]).map((rule,ri)=>{
+        const allSkus=[...BASE_PKGS.map(b=>({id:"base_"+b.id,name:b.name+" (Base)",group:"Base"})),...ADDON_CATALOG.map(a=>({id:"addon_"+a.id,name:a.name,group:"Add-On"}))];
+        const toggleSku=(skuId)=>{
+          setCard(prev=>{const rules=[...(prev.discountRules||[])];const r={...rules[ri]};
+            const s=[...(r.skus||[])];const idx=s.indexOf(skuId);
+            if(idx>=0)s.splice(idx,1);else s.push(skuId);
+            r.skus=s;rules[ri]=r;return{...prev,discountRules:rules};});
+        };
+        const updateRule=(field,val)=>{
+          setCard(prev=>{const rules=[...(prev.discountRules||[])];rules[ri]={...rules[ri],[field]:val};return{...prev,discountRules:rules};});
+        };
+        const removeRule=()=>{
+          setCard(prev=>{const rules=[...(prev.discountRules||[])];rules.splice(ri,1);return{...prev,discountRules:rules};});
+        };
+        const isAllSelected=(rule.skus||[]).length===allSkus.length;
+        const toggleAll=()=>{
+          if(isAllSelected){updateRule("skus",[]);}
+          else{updateRule("skus",allSkus.map(s=>s.id));}
+        };
+        return <div key={rule.id||ri} style={{padding:"14px 20px",borderTop:ri>0?"1px solid #E2E8F0":"none"}}>
+          <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap",marginBottom:10}}>
+            <div style={{flex:1,minWidth:160}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:3}}>RULE NAME</div>
+              <input type="text" className="inp" value={rule.name||""} onChange={e=>updateRule("name",e.target.value)}
+                placeholder="e.g. Multi-year discount" style={{width:"100%",fontSize:12}}/>
+            </div>
+            <div style={{minWidth:80}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:3}}>DISCOUNT %</div>
+              <input type="number" className="inp" min="0" max="100" value={rule.discPct||""} onChange={e=>updateRule("discPct",e.target.value)}
+                placeholder="10" style={{width:70,textAlign:"center",fontSize:12}}/>
+            </div>
+            <div style={{minWidth:130}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:3}}>APPLIES WHEN TERM IS</div>
+              <select className="inp" value={rule.termMonths||"any"} onChange={e=>updateRule("termMonths",e.target.value)} style={{fontSize:12}}>
+                <option value="any">Any term</option>
+                <option value="12">12+ months</option>
+                <option value="24">24+ months</option>
+                <option value="36">36+ months</option>
+              </select>
+            </div>
+            <button onClick={removeRule} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#B0BACA",lineHeight:1,marginTop:16}} title="Remove rule">x</button>
+          </div>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid}}>APPLIES TO SKUS</div>
+              <button onClick={toggleAll} style={{background:"none",border:"1px dashed #D9DEE6",borderRadius:4,cursor:"pointer",fontSize:10,color:C.mid,padding:"1px 6px"}}>
+                {isAllSelected?"Deselect all":"Select all"}
+              </button>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {allSkus.map(sku=>{
+                const on=(rule.skus||[]).includes(sku.id);
+                return <label key={sku.id} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:on?C.navy:C.mid,
+                  background:on?C.greenTint:"#fff",border:"1px solid "+(on?C.green:"#E2E8F0"),borderRadius:5,padding:"3px 8px",cursor:"pointer",whiteSpace:"nowrap"}}>
+                  <input type="checkbox" checked={on} onChange={()=>toggleSku(sku.id)} style={{margin:0}}/>
+                  {sku.name}
+                </label>;
+              })}
+            </div>
+          </div>
         </div>;
       })}
     </div>
