@@ -12,8 +12,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _DB_PATH = os.path.join(_HERE, "data", "proposals.db")
 
 # ── Supabase config ─────────────────────────────────────────────────
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
 USE_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
 
 app = Flask(__name__, root_path=_HERE, instance_path=os.path.join(_HERE, "instance"))
