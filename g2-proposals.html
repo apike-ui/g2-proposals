@@ -941,7 +941,14 @@ function BuilderMode({pendingLoad, onLoaded}){
   const [exporting,setExporting]=useState(false);
   const doExportPptx=async()=>{
     setExporting(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
+    const totals=computeTotals();
+    const rcMeta=rateCardId?rateCardList.find(function(r){return r.id===rateCardId;}):null;
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate,
+      rateCardName:rcMeta?rcMeta.name:null,
+      _computed:{prodSummaries:totals.prodSummaries,totalAcv:totals.totalAcv,totalList:totals.totalList,
+        nonAcvLines:totals.nonAcvLines,totalNonAcv:totals.totalNonAcv,propDiscPct:totals.propDiscPct,
+        propDiscAmt:totals.propDiscAmt,rcDiscAmt:totals.rcDiscAmt,rcDiscLines:totals.rcDiscLines,
+        finalAcv:totals.finalAcv,grandTotal:totals.grandTotal}};
     try{
       const r=await fetch("/api/proposals/export-pptx",{
         method:"POST",
@@ -966,7 +973,14 @@ function BuilderMode({pendingLoad, onLoaded}){
   const doExportGoogleSlides=async()=>{
     if(!GOOGLE_CLIENT_ID){setGsSetupOpen(true);return;}
     setExportingGS(true);
-    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate};
+    const totals2=computeTotals();
+    const rcMeta2=rateCardId?rateCardList.find(function(r){return r.id===rateCardId;}):null;
+    const snapshot={cust,rep,products,acctItems,proposalDisc,contractTerm,startDate,endDate,
+      rateCardName:rcMeta2?rcMeta2.name:null,
+      _computed:{prodSummaries:totals2.prodSummaries,totalAcv:totals2.totalAcv,totalList:totals2.totalList,
+        nonAcvLines:totals2.nonAcvLines,totalNonAcv:totals2.totalNonAcv,propDiscPct:totals2.propDiscPct,
+        propDiscAmt:totals2.propDiscAmt,rcDiscAmt:totals2.rcDiscAmt,rcDiscLines:totals2.rcDiscLines,
+        finalAcv:totals2.finalAcv,grandTotal:totals2.grandTotal}};
     try{
       /* Step 1 — get PPTX bytes from server */
       const pptxRes=await fetch("/api/proposals/export-pptx",{
