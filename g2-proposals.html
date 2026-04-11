@@ -630,11 +630,18 @@ function SuiteMode(){
    ================================================================ */
 function BuilderMode({pendingLoad, onLoaded}){
   const [rateCard,setRateCard]=useState(null);
+  const [rateCardId,setRateCardId]=useState("");
+  const [rateCardList,setRateCardList]=useState([]);
   useEffect(()=>{
-    fetch("/api/ratecard").then(r=>r.json()).then(d=>{
+    fetch("/api/ratecards").then(r=>r.json()).then(d=>{setRateCardList(d.data||[]);}).catch(()=>{});
+  },[]);
+  const loadRateCard=(id)=>{
+    setRateCardId(id);
+    if(!id){setRateCard(null);return;}
+    fetch("/api/ratecards/"+id).then(r=>r.json()).then(d=>{
       if(d.data&&d.data.card_data)setRateCard(d.data.card_data);
     }).catch(()=>{});
-  },[]);
+  };
 
   const [sub,setSub]=useState("products");
   const [cust,setCust]=useState("");
@@ -940,6 +947,13 @@ function BuilderMode({pendingLoad, onLoaded}){
       <div style={{minWidth:130}}>
         <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>END DATE</div>
         <input type="date" className="inp" value={endDate} onChange={e=>handleEndChange(e.target.value)} style={{width:150,fontSize:13}}/>
+      </div>
+      <div style={{minWidth:160}}>
+        <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>RATE CARD</div>
+        <select className="inp" value={rateCardId} onChange={e=>loadRateCard(e.target.value)} style={{width:180,fontSize:12}}>
+          <option value="">List pricing (default)</option>
+          {rateCardList.map(rc=><option key={rc.id} value={rc.id}>{rc.name}{rc.customer?" — "+rc.customer:""}</option>)}
+        </select>
       </div>
       {(()=>{const t=computeTotals();return <div style={{display:"flex",alignItems:"center",gap:16}}>
         {(showProposalDisc||pn(proposalDisc)>0)&&<div style={{textAlign:"center",borderRight:"1px solid #E2E8F0",paddingRight:16}}>
@@ -1583,197 +1597,116 @@ function ProposalsLibrary({onEdit,onView,onNew}){
 }
 
 /* ================================================================
-   RATE CARD — custom rep pricing with volume discounts
+   RATE CARD — named, per-customer with volume discounts
    ================================================================ */
-function RateCardMode(){
-  const [card,setCard]=useState(null);
-  const [loading,setLoading]=useState(true);
-  const [saving,setSaving]=useState(false);
-  const [savedMsg,setSavedMsg]=useState(false);
+function RateCardEditor({card,setCard,rcName,setRcName,rcCustomer,setRcCustomer,rcOwner,setRcOwner,onSave,saving,savedMsg,onBack}){
   const [expandedSku,setExpandedSku]=useState(null);
-
-  /* Rate card shape: { basePkgs: {free:{price:0},professional:{price:X},...},
-     addons: { intent: { tiers: [{label,price},...], volumeDisc: [{minProducts,discPct},...] }, ... },
-     nonAcv: { giftcards: {price:X}, ... } } */
-
-  useEffect(()=>{
-    fetch("/api/ratecard").then(r=>r.json()).then(d=>{
-      if(d.data&&d.data.card_data){setCard(d.data.card_data);}
-      else{setCard(buildDefault());}
-      setLoading(false);
-    }).catch(()=>{setCard(buildDefault());setLoading(false);});
-  },[]);
-
-  const buildDefault=()=>{
-    const c={basePkgs:{},addons:{},nonAcv:{}};
-    BASE_PKGS.forEach(b=>{c.basePkgs[b.id]={price:b.list};});
-    ADDON_CATALOG.forEach(a=>{
-      c.addons[a.id]={tiers:a.tiers.map(t=>({label:t.l,listPrice:t.p,myPrice:t.p})),volumeDisc:[]};
-    });
-    NONAVC_CATALOG.forEach(n=>{c.nonAcv[n.id]={price:n.list};});
-    return c;
-  };
-
-  const doSave=async()=>{
-    setSaving(true);
-    try{
-      await fetch("/api/ratecard",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({card_data:card})});
-      setSavedMsg(true);setTimeout(()=>setSavedMsg(false),3000);
-    }catch(e){alert("Save failed: "+e.message);}
-    setSaving(false);
-  };
 
   const updateBasePkg=(id,price)=>{setCard(prev=>({...prev,basePkgs:{...prev.basePkgs,[id]:{...prev.basePkgs[id],price:pn(price)}}}));};
   const updateAddonTier=(addonId,tierIdx,field,val)=>{
-    setCard(prev=>{
-      const a={...prev.addons};const t=[...(a[addonId]?.tiers||[])];
-      t[tierIdx]={...t[tierIdx],[field]:field==="label"?val:pn(val)};
-      a[addonId]={...a[addonId],tiers:t};
-      return{...prev,addons:a};
-    });
+    setCard(prev=>{const a={...prev.addons};const t=[...(a[addonId]?.tiers||[])];t[tierIdx]={...t[tierIdx],[field]:field==="label"?val:pn(val)};a[addonId]={...a[addonId],tiers:t};return{...prev,addons:a};});
   };
-  const addVolDisc=(addonId)=>{
-    setCard(prev=>{
-      const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[]),{minProducts:2,discPct:5}];
-      a[addonId]={...a[addonId],volumeDisc:vd};
-      return{...prev,addons:a};
-    });
-  };
-  const updateVolDisc=(addonId,idx,field,val)=>{
-    setCard(prev=>{
-      const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[])];
-      vd[idx]={...vd[idx],[field]:pn(val)};
-      a[addonId]={...a[addonId],volumeDisc:vd};
-      return{...prev,addons:a};
-    });
-  };
-  const removeVolDisc=(addonId,idx)=>{
-    setCard(prev=>{
-      const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[])];vd.splice(idx,1);
-      a[addonId]={...a[addonId],volumeDisc:vd};
-      return{...prev,addons:a};
-    });
-  };
+  const addVolDisc=(addonId)=>{setCard(prev=>{const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[]),{minProducts:2,discPct:5}];a[addonId]={...a[addonId],volumeDisc:vd};return{...prev,addons:a};});};
+  const updateVolDisc=(addonId,idx,field,val)=>{setCard(prev=>{const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[])];vd[idx]={...vd[idx],[field]:pn(val)};a[addonId]={...a[addonId],volumeDisc:vd};return{...prev,addons:a};});};
+  const removeVolDisc=(addonId,idx)=>{setCard(prev=>{const a={...prev.addons};const vd=[...(a[addonId]?.volumeDisc||[])];vd.splice(idx,1);a[addonId]={...a[addonId],volumeDisc:vd};return{...prev,addons:a};});};
   const updateNonAcv=(id,price)=>{setCard(prev=>({...prev,nonAcv:{...prev.nonAcv,[id]:{...prev.nonAcv[id],price:pn(price)}}}));};
 
-  if(loading)return <div style={{textAlign:"center",padding:60,color:C.mid}}>Loading rate card...</div>;
-  if(!card)return null;
-
   return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24,flexWrap:"wrap",gap:16}}>
-      <div>
-        <h2 style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:4}}>My Rate Card</h2>
-        <p style={{fontSize:13,color:C.mid}}>Set your custom pricing for each SKU. Proposals will auto-pull these rates. Add volume discounts for multi-product deals.</p>
-      </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
+      <button className="btn btn-out btn-sm" onClick={onBack} style={{fontSize:12}}>{"\u2190"} All Rate Cards</button>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         {savedMsg&&<span style={{fontSize:12,color:C.green,fontWeight:600}}>Saved!</span>}
-        <button className="btn btn-sec" onClick={doSave} disabled={saving}>{saving?"Saving...":"Save Rate Card"}</button>
+        <button className="btn btn-sec" onClick={onSave} disabled={saving}>{saving?"Saving...":"Save Rate Card"}</button>
+      </div>
+    </div>
+
+    {/* Card meta */}
+    <div className="card" style={{padding:"16px 20px",marginBottom:20}}>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>RATE CARD NAME</div>
+          <input type="text" className="inp" value={rcName} onChange={e=>setRcName(e.target.value)} placeholder="e.g. Salesforce FY27" style={{width:"100%",fontSize:14,fontWeight:600}}/>
+        </div>
+        <div style={{minWidth:180}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>CUSTOMER</div>
+          <input type="text" className="inp" value={rcCustomer} onChange={e=>setRcCustomer(e.target.value)} placeholder="e.g. Salesforce" style={{width:200,fontSize:13}}/>
+        </div>
+        <div style={{minWidth:140}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>OWNER</div>
+          <input type="text" className="inp" value={rcOwner} onChange={e=>setRcOwner(e.target.value)} placeholder="Your name" style={{width:160,fontSize:13}}/>
+        </div>
       </div>
     </div>
 
     {/* Base Packages */}
-    <div className="card" style={{overflow:"hidden",marginBottom:24}}>
-      <div style={{background:C.navy,padding:"12px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Base Packages</span></div>
-      {BASE_PKGS.map(pkg=>{
-        const myPrice=card.basePkgs[pkg.id]?.price;
-        const diff=pkg.list>0&&myPrice!==pkg.list;
-        return <div key={pkg.id} className="row" style={{gap:16}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:pkg.color}}/>
-            <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{pkg.name}</span>
-            <span style={{fontSize:12,color:C.mid}}>{pkg.hl}</span>
+    <div className="card" style={{overflow:"hidden",marginBottom:20}}>
+      <div style={{background:C.navy,padding:"10px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:13}}>Base Packages</span></div>
+      {BASE_PKGS.map(pkg=>{const myPrice=card.basePkgs[pkg.id]?.price;const diff=pkg.list>0&&myPrice!==pkg.list;
+        return <div key={pkg.id} className="row" style={{gap:16,padding:"8px 20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+            <div style={{width:7,height:7,borderRadius:"50%",background:pkg.color}}/>
+            <span style={{fontWeight:700,fontSize:13,color:C.navy}}>{pkg.name}</span>
           </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>LIST PRICE</div>
-            <div style={{fontSize:12,color:C.mid}}>{pkg.list>0?fmt(pkg.list):"$0"}</div>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>MY RATE</div>
-            <input type="number" className="inp inp-r" value={myPrice||""} placeholder={pkg.list||"0"}
-              onChange={e=>updateBasePkg(pkg.id,e.target.value)} style={{width:110}}/>
-          </div>
-          {diff&&<div style={{fontSize:11,color:C.green,fontWeight:600,minWidth:60,textAlign:"right"}}>{calcDisc(myPrice,pkg.list)}% off</div>}
+          <div style={{fontSize:11,color:C.mid}}>{pkg.list>0?fmt(pkg.list):"$0"}</div>
+          <input type="number" className="inp inp-r" value={myPrice||""} placeholder={pkg.list||"0"} onChange={e=>updateBasePkg(pkg.id,e.target.value)} style={{width:100,fontSize:12}}/>
+          {diff&&<div style={{fontSize:10,color:C.green,fontWeight:600,minWidth:50,textAlign:"right"}}>{calcDisc(myPrice,pkg.list)}%</div>}
         </div>;
       })}
     </div>
 
-    {/* Add-On Products */}
-    <div className="card" style={{overflow:"hidden",marginBottom:24}}>
-      <div style={{background:C.navy,padding:"12px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Add-On Products</span></div>
-      {ADDON_CATALOG.map(addon=>{
-        const myAddon=card.addons[addon.id]||{tiers:[],volumeDisc:[]};
-        const isOpen=expandedSku===addon.id;
+    {/* Add-Ons */}
+    <div className="card" style={{overflow:"hidden",marginBottom:20}}>
+      <div style={{background:C.navy,padding:"10px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:13}}>Add-On Products</span></div>
+      {ADDON_CATALOG.map(addon=>{const myAddon=card.addons[addon.id]||{tiers:[],volumeDisc:[]};const isOpen=expandedSku===addon.id;
         return <div key={addon.id} style={{borderBottom:"1px solid #F2F4F7"}}>
-          <div className="row" style={{cursor:"pointer",background:isOpen?addon.tint:"#fff"}} onClick={()=>setExpandedSku(isOpen?null:addon.id)}>
-            <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:addon.color}}/>
-              <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{addon.name}</span>
-              <span style={{fontSize:12,color:C.mid}}>{myAddon.tiers.length} tier{myAddon.tiers.length!==1?"s":""}</span>
-              {myAddon.volumeDisc.length>0&&<span className="pill" style={{background:C.green}}>{myAddon.volumeDisc.length} vol disc</span>}
+          <div className="row" style={{cursor:"pointer",background:isOpen?addon.tint:"#fff",padding:"10px 20px"}} onClick={()=>setExpandedSku(isOpen?null:addon.id)}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:addon.color}}/>
+              <span style={{fontWeight:700,fontSize:13,color:C.navy}}>{addon.name}</span>
+              <span style={{fontSize:11,color:C.mid}}>{myAddon.tiers.length} tiers</span>
+              {myAddon.volumeDisc.length>0&&<span className="pill" style={{background:C.green,fontSize:9}}>{myAddon.volumeDisc.length} vol</span>}
             </div>
-            <span style={{fontSize:16,color:C.mid,transform:isOpen?"rotate(180deg)":"none",transition:"transform .15s"}}>{"\u25BC"}</span>
+            <span style={{fontSize:14,color:C.mid,transform:isOpen?"rotate(180deg)":"none",transition:"transform .15s"}}>{"\u25BC"}</span>
           </div>
-          {isOpen&&<div style={{padding:"12px 20px",background:addon.tint||"#F8FAFC"}}>
-            {/* Tier pricing */}
-            <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",marginBottom:8}}>Tier Pricing</div>
-            <div style={{display:"grid",gridTemplateColumns:"3fr 1fr 1fr 1fr",gap:4,marginBottom:4}}>
-              <div style={{fontSize:10,fontWeight:600,color:C.mid,padding:"0 4px"}}>Tier</div>
-              <div style={{fontSize:10,fontWeight:600,color:C.mid,textAlign:"right",padding:"0 4px"}}>List</div>
-              <div style={{fontSize:10,fontWeight:600,color:C.mid,textAlign:"right",padding:"0 4px"}}>My Rate</div>
-              <div style={{fontSize:10,fontWeight:600,color:C.mid,textAlign:"right",padding:"0 4px"}}>Disc</div>
+          {isOpen&&<div style={{padding:"10px 20px",background:addon.tint||"#F8FAFC"}}>
+            <div style={{display:"grid",gridTemplateColumns:addon.catPricing?"3fr 1fr 0.8fr 1fr 0.6fr":"3fr 1fr 1fr 1fr",gap:4,marginBottom:2}}>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid}}>Tier</div>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>List</div>
+              {addon.catPricing&&<div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"center"}}>Categories</div>}
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>My Rate</div>
+              <div style={{fontSize:9,fontWeight:600,color:C.mid,textAlign:"right"}}>Disc</div>
             </div>
-            {myAddon.tiers.map((tier,ti)=>{
-              const disc=tier.listPrice>0&&tier.myPrice!==tier.listPrice?calcDisc(tier.myPrice,tier.listPrice):0;
-              return <div key={ti} style={{display:"grid",gridTemplateColumns:"3fr 1fr 1fr 1fr",gap:4,padding:"4px 0",borderTop:"1px solid #E2E8F0",alignItems:"center"}}>
-                <div style={{fontSize:12,color:C.navy,padding:"0 4px"}}>{tier.label}</div>
-                <div style={{fontSize:12,color:C.mid,textAlign:"right",padding:"0 4px"}}>{tier.listPrice>0?fmt(tier.listPrice):"Custom"}</div>
-                <input type="number" className="inp" style={{width:"100%",textAlign:"right",fontSize:12,padding:"4px 6px"}}
-                  value={tier.myPrice||""} placeholder={tier.listPrice||"0"}
-                  onChange={e=>updateAddonTier(addon.id,ti,"myPrice",e.target.value)}/>
-                {disc>0&&<div style={{fontSize:11,color:C.green,fontWeight:600,textAlign:"right",padding:"0 4px"}}>{disc}%</div>}
-                {disc===0&&<div/>}
-              </div>;
-            })}
-
-            {/* Category Volume Pricing (for catPricing SKUs) */}
-            {addon.catPricing&&<div style={{marginTop:16,paddingTop:12,borderTop:"2px solid #E2E8F0"}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",marginBottom:8}}>Category Volume Pricing</div>
-              <div style={{display:"flex",alignItems:"center",gap:16,padding:"8px 0",borderBottom:"1px solid #E2E8F0"}}>
-                <span style={{fontSize:12,fontWeight:700,color:C.navy,minWidth:120}}>All Categories</span>
-                <div>
-                  <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>LIST</div>
-                  <div style={{fontSize:12,color:C.mid}}>{fmt(addon.allCatPrice)}</div>
-                </div>
-                <div>
-                  <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>MY RATE</div>
-                  <input type="number" className="inp" style={{width:100,textAlign:"right",fontSize:12,padding:"4px 6px"}}
-                    value={myAddon.allCatMyPrice||""} placeholder={addon.allCatPrice}
-                    onChange={e=>{setCard(prev=>{const a={...prev.addons};a[addon.id]={...a[addon.id],allCatMyPrice:pn(e.target.value)};return{...prev,addons:a};});}}/>
-                </div>
+            {myAddon.tiers.map((tier,ti)=>{const disc=tier.listPrice>0&&tier.myPrice!==tier.listPrice?calcDisc(tier.myPrice,tier.listPrice):0;
+              return <div key={ti} style={{display:"grid",gridTemplateColumns:addon.catPricing?"3fr 1fr 0.8fr 1fr 0.6fr":"3fr 1fr 1fr 1fr",gap:4,padding:"3px 0",borderTop:"1px solid #E2E8F0",alignItems:"center"}}>
+                <div style={{fontSize:11,color:C.navy}}>{tier.label}</div>
+                <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{tier.listPrice>0?fmt(tier.listPrice):"Custom"}</div>
+                {addon.catPricing&&<input type="number" className="inp" min="1" style={{width:"100%",textAlign:"center",fontSize:11,padding:"3px 4px"}} value={tier.catCount||""} placeholder="1"
+                  onChange={e=>updateAddonTier(addon.id,ti,"catCount",e.target.value)}/>}
+                <input type="number" className="inp" style={{width:"100%",textAlign:"right",fontSize:11,padding:"3px 5px"}} value={tier.myPrice||""} placeholder={tier.listPrice||"0"} onChange={e=>updateAddonTier(addon.id,ti,"myPrice",e.target.value)}/>
+                {disc>0?<div style={{fontSize:10,color:C.green,fontWeight:600,textAlign:"right"}}>{disc}%</div>:<div/>}
+              </div>;})}
+            {addon.catPricing&&<div style={{marginTop:12,paddingTop:10,borderTop:"2px solid #E2E8F0"}}>
+              <div style={{fontSize:9,fontWeight:700,color:C.mid,textTransform:"uppercase",marginBottom:6}}>Category Volume Pricing</div>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"6px 0",borderBottom:"1px solid #E2E8F0"}}>
+                <span style={{fontSize:11,fontWeight:700,color:C.navy,minWidth:100}}>All Categories</span>
+                <span style={{fontSize:11,color:C.mid}}>{fmt(addon.allCatPrice)}</span>
+                <input type="number" className="inp" style={{width:90,textAlign:"right",fontSize:11,padding:"3px 5px"}} value={myAddon.allCatMyPrice||""} placeholder={addon.allCatPrice}
+                  onChange={e=>{setCard(prev=>{const a={...prev.addons};a[addon.id]={...a[addon.id],allCatMyPrice:pn(e.target.value)};return{...prev,addons:a};});}}/>
               </div>
-              <div style={{fontSize:10,color:C.mid,marginTop:6,marginBottom:4}}>Per-category price by volume:</div>
-              {(addon.catVolume||[]).map((cv,ci)=><div key={ci} style={{display:"flex",alignItems:"center",gap:10,padding:"4px 0",fontSize:12}}>
-                <span style={{color:C.navy,minWidth:100}}>{cv.minCats}+ categories:</span>
-                <span style={{color:C.mid}}>{fmt(cv.perCatPrice)}/cat (list)</span>
-              </div>)}
             </div>}
-
-            {/* Volume Discounts */}
-            <div style={{marginTop:16,paddingTop:12,borderTop:"2px solid #E2E8F0"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase"}}>Volume Discounts (multi-product)</div>
-                <button className="btn btn-out btn-sm" onClick={()=>addVolDisc(addon.id)} style={{fontSize:11}}>+ Add Tier</button>
+            <div style={{marginTop:12,paddingTop:10,borderTop:"2px solid #E2E8F0"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:9,fontWeight:700,color:C.mid,textTransform:"uppercase"}}>Volume Discounts</div>
+                <button className="btn btn-out btn-sm" onClick={()=>addVolDisc(addon.id)} style={{fontSize:10,padding:"2px 8px"}}>+ Add</button>
               </div>
-              {myAddon.volumeDisc.length===0&&<div style={{fontSize:12,color:C.mid,fontStyle:"italic"}}>No volume discounts set. Add a tier to offer discounts when a customer buys this SKU across multiple products.</div>}
-              {myAddon.volumeDisc.map((vd,vi)=><div key={vi} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:vi>0?"1px solid #E2E8F0":"none"}}>
-                <span style={{fontSize:12,color:C.navy,whiteSpace:"nowrap"}}>When on</span>
-                <input type="number" className="inp" min="2" style={{width:50,textAlign:"center",fontSize:12}} value={vd.minProducts||""} placeholder="2"
-                  onChange={e=>updateVolDisc(addon.id,vi,"minProducts",e.target.value)}/>
-                <span style={{fontSize:12,color:C.navy,whiteSpace:"nowrap"}}>+ products, discount</span>
-                <input type="number" className="inp" min="0" max="100" style={{width:55,textAlign:"center",fontSize:12}} value={vd.discPct||""} placeholder="5"
-                  onChange={e=>updateVolDisc(addon.id,vi,"discPct",e.target.value)}/>
-                <span style={{fontSize:12,color:C.navy}}>%</span>
-                <button onClick={()=>removeVolDisc(addon.id,vi)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#B0BACA",lineHeight:1}}>x</button>
+              {myAddon.volumeDisc.length===0&&<div style={{fontSize:11,color:C.mid,fontStyle:"italic"}}>No volume discounts.</div>}
+              {myAddon.volumeDisc.map((vd,vi)=><div key={vi} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",fontSize:11}}>
+                <span style={{color:C.navy}}>On</span>
+                <input type="number" className="inp" min="2" style={{width:40,textAlign:"center",fontSize:11,padding:"2px"}} value={vd.minProducts||""} onChange={e=>updateVolDisc(addon.id,vi,"minProducts",e.target.value)}/>
+                <span style={{color:C.navy}}>+ products:</span>
+                <input type="number" className="inp" min="0" max="100" style={{width:45,textAlign:"center",fontSize:11,padding:"2px"}} value={vd.discPct||""} onChange={e=>updateVolDisc(addon.id,vi,"discPct",e.target.value)}/>
+                <span style={{color:C.navy}}>% off</span>
+                <button onClick={()=>removeVolDisc(addon.id,vi)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#B0BACA",lineHeight:1}}>x</button>
               </div>)}
             </div>
           </div>}
@@ -1781,28 +1714,106 @@ function RateCardMode(){
       })}
     </div>
 
-    {/* Non-ACV Items */}
-    <div className="card" style={{overflow:"hidden",marginBottom:24}}>
-      <div style={{background:C.mid,padding:"12px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>Non-ACV Items</span></div>
-      {NONAVC_CATALOG.map(item=>{
-        const myPrice=card.nonAcv[item.id]?.price;
-        return <div key={item.id} className="row" style={{gap:16}}>
-          <div style={{flex:1}}>
-            <span style={{fontWeight:600,fontSize:13,color:C.navy}}>{item.name}</span>
-            <span style={{fontSize:11,color:C.mid,marginLeft:8}}>{item.note}</span>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>LIST</div>
-            <div style={{fontSize:12,color:C.mid}}>{item.list>0?fmt(item.list):"Variable"}</div>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>MY RATE</div>
-            <input type="number" className="inp inp-r" value={myPrice||""} placeholder={item.list||"0"}
-              onChange={e=>updateNonAcv(item.id,e.target.value)} style={{width:100}}/>
-          </div>
+    {/* Non-ACV */}
+    <div className="card" style={{overflow:"hidden",marginBottom:20}}>
+      <div style={{background:C.mid,padding:"10px 20px"}}><span style={{color:"#fff",fontWeight:700,fontSize:13}}>Non-ACV Items</span></div>
+      {NONAVC_CATALOG.map(item=>{const myPrice=card.nonAcv[item.id]?.price;
+        return <div key={item.id} className="row" style={{gap:12,padding:"8px 20px"}}>
+          <div style={{flex:1}}><span style={{fontWeight:600,fontSize:12,color:C.navy}}>{item.name}</span></div>
+          <div style={{fontSize:11,color:C.mid}}>{item.list>0?fmt(item.list):"Var"}</div>
+          <input type="number" className="inp inp-r" value={myPrice||""} placeholder={item.list||"0"} onChange={e=>updateNonAcv(item.id,e.target.value)} style={{width:90,fontSize:12}}/>
         </div>;
       })}
     </div>
+  </div>;
+}
+
+function RateCardMode(){
+  const [cards,setCards]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [editingId,setEditingId]=useState(null);
+  const [card,setCard]=useState(null);
+  const [rcName,setRcName]=useState("");
+  const [rcCustomer,setRcCustomer]=useState("");
+  const [rcOwner,setRcOwner]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [savedMsg,setSavedMsg]=useState(false);
+
+  const buildDefault=()=>{
+    const c={basePkgs:{},addons:{},nonAcv:{}};
+    BASE_PKGS.forEach(b=>{c.basePkgs[b.id]={price:b.list};});
+    ADDON_CATALOG.forEach(a=>{c.addons[a.id]={tiers:a.tiers.map(t=>({label:t.l,listPrice:t.p,myPrice:t.p})),volumeDisc:[]};});
+    NONAVC_CATALOG.forEach(n=>{c.nonAcv[n.id]={price:n.list};});
+    return c;
+  };
+
+  const loadList=()=>{
+    fetch("/api/ratecards").then(r=>r.json()).then(d=>{setCards(d.data||[]);setLoading(false);}).catch(()=>setLoading(false));
+  };
+  useEffect(loadList,[]);
+
+  const doNew=()=>{setEditingId("new");setCard(buildDefault());setRcName("");setRcCustomer("");setRcOwner("");};
+
+  const doEdit=(rc)=>{
+    setEditingId(rc.id);
+    fetch("/api/ratecards/"+rc.id).then(r=>r.json()).then(d=>{
+      const cd=d.data.card_data||buildDefault();
+      /* Ensure all catalog items exist in loaded card */
+      ADDON_CATALOG.forEach(a=>{if(!cd.addons[a.id])cd.addons[a.id]={tiers:a.tiers.map(t=>({label:t.l,listPrice:t.p,myPrice:t.p})),volumeDisc:[]};});
+      BASE_PKGS.forEach(b=>{if(!cd.basePkgs[b.id])cd.basePkgs[b.id]={price:b.list};});
+      NONAVC_CATALOG.forEach(n=>{if(!cd.nonAcv[n.id])cd.nonAcv[n.id]={price:n.list};});
+      setCard(cd);
+      setRcName(d.data.name||"");setRcCustomer(d.data.customer||"");setRcOwner(d.data.owner||"");
+    });
+  };
+
+  const doSave=async()=>{
+    setSaving(true);
+    try{
+      const body={name:rcName||"Untitled Rate Card",customer:rcCustomer,owner:rcOwner,card_data:card};
+      if(editingId==="new"){
+        const r=await fetch("/api/ratecards",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        const d=await r.json();
+        setEditingId(d.data.id);
+      }else{
+        await fetch("/api/ratecards/"+editingId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      }
+      setSavedMsg(true);setTimeout(()=>setSavedMsg(false),3000);
+      loadList();
+    }catch(e){alert("Save failed: "+e.message);}
+    setSaving(false);
+  };
+
+  const doBack=()=>{setEditingId(null);setCard(null);loadList();};
+
+  if(loading)return <div style={{textAlign:"center",padding:60,color:C.mid}}>Loading...</div>;
+
+  /* Editor view */
+  if(editingId)return <RateCardEditor card={card} setCard={setCard} rcName={rcName} setRcName={setRcName}
+    rcCustomer={rcCustomer} setRcCustomer={setRcCustomer} rcOwner={rcOwner} setRcOwner={setRcOwner}
+    onSave={doSave} saving={saving} savedMsg={savedMsg} onBack={doBack}/>;
+
+  /* List view */
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
+      <div>
+        <h2 style={{fontSize:24,fontWeight:800,color:C.navy,marginBottom:4}}>Rate Cards</h2>
+        <p style={{fontSize:13,color:C.mid}}>Create customer-specific rate cards. Proposals auto-pull pricing from the selected rate card.</p>
+      </div>
+      <button className="btn btn-pri" onClick={doNew} style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:18,lineHeight:1}}>+</span> New Rate Card</button>
+    </div>
+    {cards.length===0&&<div className="card" style={{padding:"40px 20px",textAlign:"center"}}>
+      <div style={{fontSize:14,color:C.mid,marginBottom:12}}>No rate cards yet</div>
+      <button className="btn btn-sec" onClick={doNew}>Create Your First Rate Card</button>
+    </div>}
+    {cards.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+      {cards.map(rc=><div key={rc.id} className="card card-hover" onClick={()=>doEdit(rc)} style={{padding:"16px 20px",cursor:"pointer"}}>
+        <div style={{fontWeight:700,fontSize:15,color:C.navy,marginBottom:4}}>{rc.name||"Untitled"}</div>
+        {rc.customer&&<div style={{fontSize:12,color:C.blue,fontWeight:600,marginBottom:2}}>{rc.customer}</div>}
+        {rc.owner&&<div style={{fontSize:11,color:C.mid}}>Owner: {rc.owner}</div>}
+        <div style={{fontSize:10,color:C.mid,marginTop:6}}>{rc.updated_at?new Date(rc.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):""}</div>
+      </div>)}
+    </div>}
   </div>;
 }
 
@@ -1834,7 +1845,7 @@ function App(){
             <div className="mode-bar">
               <button className={`mode-btn ${mode==="proposals"?"on":""}`} onClick={()=>setMode("proposals")}>📋 Proposals</button>
               <button className={`mode-btn ${mode==="builder"?"on":""}`} onClick={goNew}>+ New Proposal</button>
-              <button className={`mode-btn ${mode==="ratecard"?"on":""}`} onClick={()=>setMode("ratecard")}>My Rate Card</button>
+              <button className={`mode-btn ${mode==="ratecard"?"on":""}`} onClick={()=>setMode("ratecard")}>Create Account Rate Card</button>
               <button className={`mode-btn ${mode==="suite"?"on":""}`} onClick={()=>setMode("suite")}>Product Reference</button>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={()=>{sessionStorage.removeItem("g2auth");setAuthed(false);}}>Sign Out</button>

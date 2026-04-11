@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "g2-vendor-intelligence": {
+      "command": "python3",
+      "args": ["g2_mcp_server.py"],
+      "env": {
+        "G2_API_KEY": "${G2_API_KEY}"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "proposals",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/Users/apike/Documents/Claude Code BI Dashboard/proposals_server.py"],
+      "port": 5001
+    }
+  ]
+}

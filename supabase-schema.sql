@@ -32,9 +32,12 @@ alter table proposal_versions enable row level security;
 create policy "public_all" on proposals for all using (true) with check (true);
 create policy "public_all" on proposal_versions for all using (true) with check (true);
 
--- Rate cards (shared team rate card with volume discounts)
+-- Rate cards (named, per-customer with owner)
 create table if not exists rate_cards (
   id           uuid default gen_random_uuid() primary key,
+  name         text not null default 'Untitled Rate Card',
+  customer     text default '',
+  owner        text default '',
   card_data    jsonb not null default '{}',
   updated_at   timestamptz default now()
 );

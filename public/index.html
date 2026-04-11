@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>G2 Vendor Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "secondary": "#5f5e5e",
+          "on-tertiary-container": "#fbfdff",
+          "surface-container": "#f0edec",
+          "on-primary": "#ffffff",
+          "outline-variant": "#eabcb8",
+          "surface-container-high": "#ebe7e7",
+          "on-secondary-container": "#636262",
+          "primary": "#FF492C",
+          "surface-container-lowest": "#ffffff",
+          "secondary-fixed-dim": "#c8c6c5",
+          "on-surface": "#252530",
+          "on-secondary-fixed": "#1c1b1b",
+          "on-background": "#252530",
+          "surface-container-highest": "#e5e2e1",
+          "background": "#fcf9f8",
+          "surface-container-low": "#f6f3f2",
+          "surface-tint": "#FF492C",
+          "on-surface-variant": "#5f3e3c",
+          "on-secondary-fixed-variant": "#474746",
+          "on-error": "#ffffff",
+          "error": "#ba1a1a",
+          "on-tertiary-fixed-variant": "#004d66",
+          "surface-dim": "#dcd9d9",
+          "surface": "#fcf9f8",
+          "on-primary-fixed-variant": "#930014",
+          "tertiary-fixed-dim": "#70d2ff",
+          "on-primary-fixed": "#410004",
+          "inverse-primary": "#ffb3ae",
+          "inverse-on-surface": "#f3f0ef",
+          "surface-variant": "#e5e2e1",
+          "on-tertiary-fixed": "#001e2b",
+          "primary-container": "#FF492C",
+          "secondary-container": "#e2dfde",
+          "outline": "#946e6a",
+          "on-secondary": "#ffffff",
+          "tertiary": "#00A3BF",
+          "on-tertiary": "#ffffff",
+          "primary-fixed-dim": "#ffb3ae",
+          "on-primary-container": "#fffbff",
+          "error-container": "#ffdad6",
+          "primary-fixed": "#ffdad7",
+          "surface-bright": "#fcf9f8",
+          "secondary-fixed": "#e5e2e1",
+          "inverse-surface": "#252530",
+          "tertiary-fixed": "#c0e8ff",
+          "tertiary-container": "#007ea5",
+          "on-error-container": "#93000a",
+          "g2-red": "#FF492C",
+          "g2-purple": "#663399",
+          "g2-teal": "#00A3BF",
+          "g2-yellow": "#FFD200",
+          "g2-blue": "#007BC3",
+          "g2-dark-blue": "#252530"
+        },
+        fontFamily: {
+          "headline": ["Manrope"],
+          "body": ["Inter"],
+          "label": ["Inter"]
+        },
+        borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+  body { font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
+  h1,h2,h3 { font-family: 'Manrope', sans-serif; }
+  .glass-effect { backdrop-filter: blur(12px); background-color: rgba(255,255,255,0.8); }
+  .fade-in { animation: fadeIn .4s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:none } }
+  .skeleton { background: linear-gradient(90deg,#f0edec 25%,#ebe7e7 50%,#f0edec 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+
+<!-- TopAppBar -->
+<header class="bg-[#fcf9f8] flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50">
+  <div class="flex items-center gap-4">
+    <div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-white font-black tracking-tighter text-lg">G2</div>
+    <h1 class="font-['Manrope'] font-bold tracking-tight text-xl text-[#ff492c]">G2 Vendor Intelligence</h1>
+  </div>
+  <div class="flex items-center gap-6">
+    <div class="hidden md:flex items-center gap-8">
+      <nav class="flex gap-6">
+        <a id="nav-funnel"   class="text-[#ff492c] font-bold transition-colors duration-200 cursor-pointer" onclick="showTab('funnel')">Funnel</a>
+        <a id="nav-companies" class="text-[#5f3e3c] hover:bg-[#f6f3f2] px-3 py-1 rounded transition-colors duration-200 cursor-pointer" onclick="showTab('companies')">Companies</a>
+        <a id="nav-regions"  class="text-[#5f3e3c] hover:bg-[#f6f3f2] px-3 py-1 rounded transition-colors duration-200 cursor-pointer" onclick="showTab('regions')">Regions</a>
+        <a id="nav-categories" class="text-[#5f3e3c] hover:bg-[#f6f3f2] px-3 py-1 rounded transition-colors duration-200 cursor-pointer" onclick="showTab('categories')">Categories</a>
+        <a id="nav-subscriptions" class="text-[#5f3e3c] hover:bg-[#f6f3f2] px-3 py-1 rounded transition-colors duration-200 cursor-pointer" onclick="showTab('subscriptions')">Subscriptions</a>
+      </nav>
+    </div>
+    <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full">
+      <div class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+      <span class="text-xs font-semibold text-on-surface-variant tracking-wide">Loading…</span>
+    </div>
+    <button onclick="refreshData()" title="Refresh data" class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors">
+      <span id="refresh-icon" class="material-symbols-outlined text-sm text-on-surface-variant">refresh</span>
+    </button>
+  </div>
+</header>
+
+<main class="flex-grow px-8 pt-4 pb-32 max-w-7xl mx-auto w-full">
+
+  <!-- Vendor Header -->
+  <div id="vendor-header" class="mb-6">
+    <div class="flex flex-wrap items-center gap-4">
+      <div class="flex items-center gap-3 flex-grow min-w-0">
+        <div id="vendor-icon" class="w-12 h-12 bg-g2-dark-blue rounded-xl flex items-center justify-center text-white font-black text-lg tracking-tight flex-shrink-0 skeleton">—</div>
+        <div class="min-w-0">
+          <h2 id="vendor-name" class="text-2xl font-extrabold text-on-surface tracking-tight skeleton h-7 w-24">—</h2>
+          <p id="vendor-subtitle" class="text-xs text-on-surface-variant mt-0.5">Loading vendor…</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Vendor search -->
+        <div class="relative">
+          <div class="flex items-center bg-surface-container-lowest border border-outline-variant/30 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-g2-red/30 focus-within:border-g2-red">
+            <span class="material-symbols-outlined text-on-surface-variant text-sm pl-3">search</span>
+            <input id="vendor-search" type="text" placeholder="Search vendor (e.g. IBM, Salesforce)"
+              class="text-sm font-medium text-on-surface bg-transparent border-none focus:ring-0 py-2 px-2 w-52"
+              onkeydown="if(event.key==='Enter') searchVendor()"
+              autocomplete="off"/>
+            <button onclick="searchVendor()" class="px-3 py-2 text-xs font-bold text-g2-red hover:bg-surface-container transition-colors">Go</button>
+          </div>
+          <!-- Search results dropdown -->
+          <div id="vendor-search-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 z-50 max-h-72 overflow-y-auto"></div>
+        </div>
+        <!-- Multi-select product picker -->
+        <div class="relative" id="product-picker-container">
+          <button id="product-picker-btn" onclick="toggleProductPicker()"
+            class="flex items-center gap-2 text-sm font-medium text-on-surface bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-3 py-2 min-w-[180px] max-w-[220px] focus:ring-2 focus:ring-g2-red/30 focus:border-g2-red cursor-pointer">
+            <span id="product-picker-label" class="flex-grow text-left truncate">All Products</span>
+            <span class="material-symbols-outlined text-sm text-on-surface-variant flex-shrink-0">expand_more</span>
+          </button>
+          <div id="product-picker-dropdown" class="hidden absolute top-full right-0 mt-1 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 z-50 w-80 max-h-96 flex flex-col">
+            <div class="flex items-center justify-between px-3 py-2 border-b border-outline-variant/10 bg-surface-container-lowest rounded-t-xl">
+              <span id="product-picker-count" class="text-xs text-on-surface-variant">0 products</span>
+              <div class="flex gap-2">
+                <button onclick="selectAllProducts()" class="text-xs font-semibold text-g2-red hover:underline">All</button>
+                <span class="text-on-surface-variant text-xs">·</span>
+                <button onclick="clearProducts()" class="text-xs font-semibold text-on-surface-variant hover:underline">Clear</button>
+              </div>
+            </div>
+            <div id="product-picker-list" class="overflow-y-auto flex-1 py-1"></div>
+            <div class="px-3 py-2 border-t border-outline-variant/10 bg-surface-container-lowest rounded-b-xl">
+              <button onclick="applyProductSelection()" class="w-full bg-g2-red text-white text-xs font-bold py-2 rounded-lg hover:bg-g2-red/90 transition-all">
+                Load Intent Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Loading bar for search -->
+    <div id="search-loading" class="hidden mt-2 h-1 bg-surface-container rounded-full overflow-hidden">
+      <div class="h-full bg-g2-red/60 rounded-full animate-pulse" style="width:100%"></div>
+    </div>
+    <!-- Date range bar -->
+    <div class="flex flex-wrap items-center gap-3 mt-4">
+      <span class="text-xs text-on-surface-variant font-medium">Period:</span>
+      <div class="flex items-center bg-surface-container-lowest border border-outline-variant/20 rounded-full p-1 gap-0.5">
+        <button id="dr-1m" onclick="setDateRange('1m')" class="px-3 py-1 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all">1M</button>
+        <button id="dr-3m" onclick="setDateRange('3m')" class="px-3 py-1 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all">3M</button>
+        <button id="dr-6m" onclick="setDateRange('6m')" class="px-3 py-1 rounded-full text-xs font-semibold bg-g2-red text-white transition-all">6M</button>
+        <button id="dr-1y" onclick="setDateRange('1y')" class="px-3 py-1 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all">1Y</button>
+      </div>
+      <span id="date-range-label" class="text-xs text-on-surface-variant"></span>
+    </div>
+    <!-- Active filters strip -->
+    <div id="active-filters-bar" class="hidden flex-wrap items-center gap-2 mt-3 pt-3 border-t border-outline-variant/20">
+      <span class="text-[10px] uppercase tracking-widest text-on-surface-variant/60 font-semibold">Active Filters:</span>
+      <span id="filter-chip-vendor" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-g2-red/10 border border-g2-red/20 text-xs text-g2-red font-medium">
+        <span class="material-symbols-outlined text-[12px]">business</span>
+        <span id="filter-chip-vendor-label"></span>
+      </span>
+      <span id="filter-chip-products" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+        <span class="material-symbols-outlined text-[12px]">package_2</span>
+        <span id="filter-chip-products-label"></span>
+      </span>
+      <span id="filter-chip-period" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container border border-outline-variant/30 text-xs text-on-surface-variant font-medium">
+        <span class="material-symbols-outlined text-[12px]">calendar_month</span>
+        <span id="filter-chip-period-label"></span>
+      </span>
+      <span id="filter-chip-snapshot" class="hidden items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-medium">
+        <span class="material-symbols-outlined text-[12px]">info</span>
+        <span id="filter-chip-snapshot-label">Estimated from snapshot · connect G2 API for exact data</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  <div id="error-banner" class="hidden mb-6 p-4 bg-error-container rounded-xl border border-error/20 flex items-center gap-3">
+    <span class="material-symbols-outlined text-error">error</span>
+    <p id="error-msg" class="text-sm text-on-error-container font-medium"></p>
+  </div>
+
+  <!-- ==================== FUNNEL TAB ==================== -->
+  <div id="tab-funnel" class="grid grid-cols-1 md:grid-cols-12 gap-8">
+
+    <!-- Hero Stat & Intent Funnel -->
+    <div class="md:col-span-8 flex flex-col gap-8">
+      <section class="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+        <div class="flex justify-between items-end mb-8">
+          <div>
+            <span class="text-xs text-on-surface-variant font-medium uppercase tracking-widest">Active Intent Score</span>
+            <h2 id="intent-score" class="text-5xl font-extrabold text-on-surface tracking-tighter mt-2 skeleton h-12 w-32">—</h2>
+          </div>
+          <div class="text-right">
+            <span id="wow-badge" class="font-bold flex items-center gap-1 text-on-surface-variant text-sm">—</span>
+            <p class="text-xs text-on-surface-variant">vs. previous week</p>
+          </div>
+        </div>
+        <!-- Funnel bars -->
+        <div class="space-y-4">
+          <div class="relative">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold">Awareness <span class="text-xs text-on-surface-variant font-normal">(Profile views)</span></span>
+              <span id="awareness-count" class="text-sm font-bold">—</span>
+            </div>
+            <div class="h-12 w-full bg-surface-container rounded-lg overflow-hidden relative">
+              <div class="h-full bg-g2-red/20 w-full absolute"></div>
+              <div id="awareness-bar" class="h-full bg-g2-red rounded-r-lg absolute left-0 top-0 transition-all duration-700" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold">Consideration <span class="text-xs text-on-surface-variant font-normal">(Compare + Category)</span></span>
+              <span id="consideration-count" class="text-sm font-bold">—</span>
+            </div>
+            <div class="h-12 w-full bg-surface-container rounded-lg overflow-hidden relative">
+              <div class="h-full bg-g2-red/20 w-full absolute"></div>
+              <div id="consideration-bar" class="h-full bg-g2-red rounded-r-lg absolute left-0 top-0 transition-all duration-700" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold">Decision <span class="text-xs text-on-surface-variant font-normal">(Pricing views)</span></span>
+              <span id="decision-count" class="text-sm font-bold">—</span>
+            </div>
+            <div class="h-12 w-full bg-surface-container rounded-lg overflow-hidden relative">
+              <div class="h-full bg-g2-red/20 w-full absolute"></div>
+              <div id="decision-bar" class="h-full bg-g2-red rounded-r-lg absolute left-0 top-0 transition-all duration-700" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <p id="fetched-at" class="text-xs text-on-surface-variant/60 mt-4 text-right"></p>
+      </section>
+
+      <!-- Competitive Intelligence -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-surface-container-low p-6 rounded-xl">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-g2-red">analytics</span>
+            Also Evaluating
+          </h3>
+          <div id="competitors-list" class="space-y-2">
+            <!-- populated by JS -->
+            <div class="skeleton h-6 w-full"></div>
+            <div class="skeleton h-6 w-5/6"></div>
+            <div class="skeleton h-6 w-4/6"></div>
+          </div>
+        </div>
+        <div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+              <span class="material-symbols-outlined text-g2-red">trending_up</span>
+              Weekly Trend
+            </h3>
+            <div id="trend-bars" class="flex items-end gap-2 h-20 mt-4">
+              <!-- sparkline bars populated by JS -->
+            </div>
+          </div>
+          <div id="trend-summary" class="mt-4 p-3 bg-surface-container rounded-lg text-xs text-on-surface-variant italic leading-relaxed">
+            Loading trend data…
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Regional Sidebar -->
+    <div class="md:col-span-4 flex flex-col gap-8">
+      <section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 h-full">
+        <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+          <span class="material-symbols-outlined text-g2-red">public</span>
+          Regional Interest
+        </h3>
+        <div id="regional-list" class="space-y-6">
+          <div class="skeleton h-8 w-full"></div>
+          <div class="skeleton h-8 w-full"></div>
+          <div class="skeleton h-8 w-full"></div>
+          <div class="skeleton h-8 w-full"></div>
+        </div>
+        <div id="region-note" class="mt-8 p-4 bg-surface-container-low rounded-lg border border-outline-variant/20">
+          <p class="text-xs text-g2-dark-blue italic leading-relaxed">Loading regional data…</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ==================== COMPANIES TAB ==================== -->
+  <div id="tab-companies" class="hidden fade-in">
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+      <div class="p-4 border-b border-outline-variant/10">
+        <!-- Header row -->
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-lg font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-g2-red">groups</span>
+            High-Intent Companies
+          </h3>
+          <button onclick="downloadCompaniesCSV()" class="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-g2-red px-3 py-1.5 rounded-lg border border-outline-variant/30 hover:border-g2-red/30 transition-all">
+            <span class="material-symbols-outlined text-[14px]">download</span>
+            Download CSV
+          </button>
+        </div>
+        <!-- Filter bar -->
+        <div class="flex flex-wrap gap-2">
+          <div class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 rounded-lg px-3 py-1.5 min-w-[140px]">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant">factory</span>
+            <input id="filter-industry" type="text" placeholder="Industry…" oninput="applyCompanyFilters()"
+              class="bg-transparent text-xs border-none focus:ring-0 p-0 w-full placeholder:text-on-surface-variant/60"/>
+          </div>
+          <div class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 rounded-lg px-3 py-1.5 min-w-[130px]">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant">public</span>
+            <input id="filter-country" type="text" placeholder="Country…" oninput="applyCompanyFilters()"
+              class="bg-transparent text-xs border-none focus:ring-0 p-0 w-full placeholder:text-on-surface-variant/60"/>
+          </div>
+          <div class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/20 rounded-lg px-3 py-1.5">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant">people</span>
+            <input id="filter-employees" type="text" placeholder="Employee size…" oninput="applyCompanyFilters()"
+              class="bg-transparent text-xs border-none focus:ring-0 p-0 w-28 placeholder:text-on-surface-variant/60"/>
+          </div>
+          <button onclick="clearCompanyFilters()" id="clear-company-filters" class="hidden text-xs text-on-surface-variant hover:text-g2-red transition-colors px-2">
+            <span class="material-symbols-outlined text-[14px]">close</span> Clear
+          </button>
+          <span id="company-filter-count" class="hidden text-xs text-on-surface-variant self-center ml-1"></span>
+        </div>
+      </div>
+      <div id="companies-table" class="divide-y divide-outline-variant/10">
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== CATEGORIES TAB ==================== -->
+  <div id="tab-categories" class="hidden fade-in">
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+      <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-g2-red">category</span>
+            Categories Being Researched
+          </h3>
+          <p class="text-xs text-on-surface-variant mt-0.5">G2 software categories your buyer intent companies are also browsing</p>
+        </div>
+        <span id="categories-count-badge" class="text-xs text-on-surface-variant"></span>
+      </div>
+      <div id="categories-table" class="divide-y divide-outline-variant/10">
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+        <div class="p-6 skeleton h-10 m-4 rounded"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== REGIONS TAB ==================== -->
+  <div id="tab-regions" class="hidden fade-in">
+    <section class="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+      <h3 class="text-lg font-bold mb-8 flex items-center gap-2">
+        <span class="material-symbols-outlined text-g2-red">map</span>
+        Global Buyer Intent Distribution
+      </h3>
+      <div id="regions-detail" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="skeleton h-24 rounded-xl"></div>
+        <div class="skeleton h-24 rounded-xl"></div>
+        <div class="skeleton h-24 rounded-xl"></div>
+        <div class="skeleton h-24 rounded-xl"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== SUBSCRIPTIONS TAB ==================== -->
+  <div id="tab-subscriptions" class="hidden fade-in">
+    <!-- Filter bar -->
+    <div class="flex flex-wrap items-center gap-4 mb-6">
+      <h3 class="text-lg font-bold flex items-center gap-2">
+        <span class="material-symbols-outlined text-g2-red">verified</span>
+        Intent Subscription Coverage
+      </h3>
+      <div class="flex-grow"></div>
+      <div class="flex items-center gap-2 bg-surface-container-lowest rounded-full p-1 border border-outline-variant/20">
+        <button id="filter-all" onclick="setSubFilter('all')" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-g2-red text-white transition-all">All</button>
+        <button id="filter-subscribed" onclick="setSubFilter('subscribed')" class="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all">Subscribed</button>
+        <button id="filter-unsubscribed" onclick="setSubFilter('unsubscribed')" class="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all">Not Subscribed</button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10">
+        <span class="text-xs text-on-surface-variant uppercase tracking-widest font-medium">Products</span>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span id="sub-products-with" class="text-3xl font-extrabold text-g2-teal">—</span>
+          <span class="text-sm text-on-surface-variant">with intent</span>
+          <span class="text-lg text-on-surface-variant mx-1">/</span>
+          <span id="sub-products-total" class="text-xl font-bold text-on-surface">—</span>
+          <span class="text-sm text-on-surface-variant">total</span>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10">
+        <span class="text-xs text-on-surface-variant uppercase tracking-widest font-medium">Subscribed Categories</span>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span id="sub-cats-subscribed" class="text-3xl font-extrabold text-g2-teal">—</span>
+          <span class="text-sm text-on-surface-variant">active</span>
+          <span class="text-lg text-on-surface-variant mx-1">/</span>
+          <span id="sub-cats-total" class="text-xl font-bold text-on-surface">—</span>
+          <span class="text-sm text-on-surface-variant">total</span>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10">
+        <span class="text-xs text-on-surface-variant uppercase tracking-widest font-medium">Total Intent Signals</span>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span id="sub-total-activity" class="text-3xl font-extrabold text-g2-red">—</span>
+          <span class="text-sm text-on-surface-variant">across subscribed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product cards -->
+    <div id="sub-products-list" class="space-y-6">
+      <div class="skeleton h-48 rounded-xl"></div>
+    </div>
+
+    <!-- Expansion opportunity callout -->
+    <div id="sub-expansion-note" class="hidden mt-6 p-5 bg-g2-purple/5 rounded-xl border border-g2-purple/20">
+      <h4 class="text-sm font-bold text-g2-purple flex items-center gap-2 mb-2">
+        <span class="material-symbols-outlined text-sm">lightbulb</span>
+        Expansion Opportunity
+      </h4>
+      <p id="sub-expansion-text" class="text-sm text-on-surface leading-relaxed"></p>
+    </div>
+  </div>
+
+</main>
+
+<!-- Bottom Command Bar -->
+<div class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-50">
+  <div class="bg-surface-container-lowest glass-effect rounded-full shadow-[0_8px_32px_rgba(37,37,48,0.12)] border border-outline-variant/30 px-6 py-3 flex items-center gap-4">
+    <div class="bg-g2-red p-2 rounded-full flex items-center justify-center text-white">
+      <span class="material-symbols-outlined text-sm">bolt</span>
+    </div>
+    <input id="query-input" class="flex-grow bg-transparent border-none focus:ring-0 text-sm font-medium text-g2-dark-blue placeholder:text-on-surface-variant/60"
+      placeholder="Ask about your intent data…" type="text"
+      onkeydown="if(event.key==='Enter') handleQuery()"/>
+    <button onclick="handleQuery()" class="bg-g2-red text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-g2-red/90 transition-all flex items-center gap-2">
+      Analyze
+      <span class="material-symbols-outlined text-xs">arrow_forward</span>
+    </button>
+  </div>
+  <div id="query-result" class="hidden mt-3 bg-surface-container-lowest glass-effect rounded-xl border border-outline-variant/20 shadow p-4 text-sm text-on-surface leading-relaxed">
+    <div id="query-answer"></div>
+    <div id="query-chart-wrap" class="hidden mt-4" style="position:relative;height:280px;">
+      <canvas id="query-chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Nav -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-6 pt-2 bg-white/80 backdrop-blur-xl border-t border-[#eabcb8]/15">
+  <button onclick="showTab('funnel')" class="flex flex-col items-center text-[#ff492c] bg-[#fcf9f8] rounded-xl px-4 py-2">
+    <span class="material-symbols-outlined">filter_alt</span>
+    <span class="text-[10px] uppercase tracking-widest font-semibold mt-1">Funnel</span>
+  </button>
+  <button onclick="showTab('companies')" class="flex flex-col items-center text-[#5f3e3c] px-4 py-2 hover:text-[#ff492c] transition-all">
+    <span class="material-symbols-outlined">groups</span>
+    <span class="text-[10px] uppercase tracking-widest font-semibold mt-1">Companies</span>
+  </button>
+  <button onclick="showTab('regions')" class="flex flex-col items-center text-[#5f3e3c] px-4 py-2 hover:text-[#ff492c] transition-all">
+    <span class="material-symbols-outlined">public</span>
+    <span class="text-[10px] uppercase tracking-widest font-semibold mt-1">Regions</span>
+  </button>
+  <button onclick="showTab('categories')" class="flex flex-col items-center text-[#5f3e3c] px-4 py-2 hover:text-[#ff492c] transition-all">
+    <span class="material-symbols-outlined">category</span>
+    <span class="text-[10px] uppercase tracking-widest font-semibold mt-1">Categ</span>
+  </button>
+  <button onclick="showTab('subscriptions')" class="flex flex-col items-center text-[#5f3e3c] px-4 py-2 hover:text-[#ff492c] transition-all">
+    <span class="material-symbols-outlined">verified</span>
+    <span class="text-[10px] uppercase tracking-widest font-semibold mt-1">Subs</span>
+  </button>
+</nav>
+
+<script>
+// -------------------------------------------------------
+// State
+// -------------------------------------------------------
+let dashData = null;
+let currentTab = 'funnel';
+let subFilter = 'all';
+let selectedProductIds = [];   // array of selected product IDs
+let allVendorProducts = [];    // all products for current vendor
+let selectedDateRange = '6m'; // default period
+let lastLoadedProductIds = []; // tracks what was last fetched (for date range re-loads)
+let lastLoadedVendor = null;   // tracks vendor for re-loads
+
+// -------------------------------------------------------
+// Date range
+// -------------------------------------------------------
+function setDateRange(range) {
+  selectedDateRange = range;
+  ['1m','3m','6m','1y'].forEach(r => {
+    const btn = document.getElementById('dr-' + r);
+    btn.className = r === range
+      ? 'px-3 py-1 rounded-full text-xs font-semibold bg-g2-red text-white transition-all'
+      : 'px-3 py-1 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all';
+  });
+  updateDateRangeLabel();
+  // Immediately re-render with client-side date filter (instant feedback)
+  if (dashData) render(dashData);
+  // Also reload from server so live-API mode gets truly period-filtered data
+  if (lastLoadedProductIds.length > 0) {
+    if (lastLoadedVendor) loadVendorIntent(lastLoadedVendor, allVendorProducts);
+    else loadMultiProductIntent(lastLoadedProductIds);
+  } else {
+    loadDashboard();
+  }
+}
+
+function getDateRangeBounds() {
+  const end = new Date();
+  const start = new Date(end);
+  if (selectedDateRange === '1m') start.setMonth(start.getMonth() - 1);
+  else if (selectedDateRange === '3m') start.setMonth(start.getMonth() - 3);
+  else if (selectedDateRange === '6m') start.setMonth(start.getMonth() - 6);
+  else if (selectedDateRange === '1y') start.setFullYear(start.getFullYear() - 1);
+  return { start, end };
+}
+
+function updateDateRangeLabel() {
+  const { start, end } = getDateRangeBounds();
+  const fmtOpts = { month: 'short', year: 'numeric' };
+  document.getElementById('date-range-label').textContent =
+    start.toLocaleDateString('en-US', fmtOpts) + ' – ' + end.toLocaleDateString('en-US', fmtOpts);
+}
+
+function updateActiveFiltersBar(snapshotMode) {
+  const bar = document.getElementById('active-filters-bar');
+  const chipVendor    = document.getElementById('filter-chip-vendor');
+  const chipProducts  = document.getElementById('filter-chip-products');
+  const chipPeriod    = document.getElementById('filter-chip-period');
+  const chipSnapshot  = document.getElementById('filter-chip-snapshot');
+
+  // Vendor chip
+  const vendorName = lastLoadedVendor?.name || (dashData?.vendor?.name);
+  if (vendorName) {
+    document.getElementById('filter-chip-vendor-label').textContent = vendorName;
+    chipVendor.classList.remove('hidden');
+    chipVendor.classList.add('inline-flex');
+  } else {
+    chipVendor.classList.add('hidden');
+    chipVendor.classList.remove('inline-flex');
+  }
+
+  // Products chip
+  const total  = allVendorProducts.length;
+  const selCount = lastLoadedProductIds.length;
+  if (selCount > 0 && total > 0) {
+    const label = selCount === total ? `All ${total} products` : `${selCount} of ${total} products`;
+    document.getElementById('filter-chip-products-label').textContent = label;
+    chipProducts.classList.remove('hidden');
+    chipProducts.classList.add('inline-flex');
+  } else {
+    chipProducts.classList.add('hidden');
+    chipProducts.classList.remove('inline-flex');
+  }
+
+  // Period chip
+  const { start, end } = getDateRangeBounds();
+  const fmtOpts = { month: 'short', year: 'numeric' };
+  document.getElementById('filter-chip-period-label').textContent =
+    start.toLocaleDateString('en-US', fmtOpts) + ' – ' + end.toLocaleDateString('en-US', fmtOpts);
+  chipPeriod.classList.remove('hidden');
+  chipPeriod.classList.add('inline-flex');
+
+  // Snapshot chip — describe what the current filter combination is showing
+  const cf = getCompanyFilters();
+  const hasCompanyFilter = !!(cf.industry || cf.country || cf.employees);
+  const periodScale = Math.min(1, (_PERIOD_WEEKS[selectedDateRange] || 26) / 26);
+  const hasPeriodScale = periodScale < 1;
+  const showSnapshot = snapshotMode || hasCompanyFilter || hasPeriodScale;
+
+  if (showSnapshot) {
+    const parts = [];
+    if (hasPeriodScale) parts.push(`${selectedDateRange.toUpperCase()} window`);
+    if (hasCompanyFilter) {
+      if (cf.industry)  parts.push(`industry: ${cf.industry}`);
+      if (cf.country)   parts.push(`country: ${cf.country}`);
+      if (cf.employees) parts.push(`employees: ${cf.employees}`);
+    }
+    if (snapshotMode) parts.push('snapshot data');
+    const label = parts.length
+      ? `Showing ${parts.join(' · ')} — metrics estimated`
+      : 'Estimated from snapshot · connect G2 API for exact data';
+    document.getElementById('filter-chip-snapshot-label').textContent = label;
+    chipSnapshot.classList.remove('hidden');
+    chipSnapshot.classList.add('inline-flex');
+  } else {
+    chipSnapshot.classList.add('hidden');
+    chipSnapshot.classList.remove('inline-flex');
+  }
+
+  // Show bar if any chip is visible
+  const anyActive = vendorName || selCount > 0 || showSnapshot;
+  bar.classList.toggle('hidden', !anyActive);
+  bar.classList.toggle('flex', anyActive);
+}
+
+function filterTrendByDateRange(trend) {
+  if (!trend || !trend.length) return trend;
+  const { start } = getDateRangeBounds();
+  const filtered = trend.filter(t => new Date(t.week) >= start);
+  return filtered.length ? filtered : trend; // fall back to all if nothing in range
+}
+
+// -------------------------------------------------------
+// Tab navigation
+// -------------------------------------------------------
+function showTab(tab) {
+  currentTab = tab;
+  ['funnel','companies','regions','categories','subscriptions'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
+    const navEl = document.getElementById('nav-'+t);
+    if (navEl) {
+      if (t === tab) {
+        navEl.className = 'text-[#ff492c] font-bold transition-colors duration-200 cursor-pointer';
+      } else {
+        navEl.className = 'text-[#5f3e3c] hover:bg-[#f6f3f2] px-3 py-1 rounded transition-colors duration-200 cursor-pointer';
+      }
+    }
+  });
+  if (dashData) {
+    const fd = computeFilteredView(dashData);
+    if (tab === 'companies')     renderCompanies(fd);
+    if (tab === 'regions')       renderRegionsDetail(fd);
+    if (tab === 'categories')    renderCategories(dashData);
+    if (tab === 'subscriptions') renderSubscriptions(dashData);
+  }
+}
+
+// -------------------------------------------------------
+// Fetch data
+// -------------------------------------------------------
+function getCompanyFilters() {
+  return {
+    industry: (document.getElementById('filter-industry')?.value || '').trim(),
+    country:  (document.getElementById('filter-country')?.value  || '').trim(),
+    employees:(document.getElementById('filter-employees')?.value || '').trim(),
+  };
+}
+
+async function loadDashboard() {
+  try {
+    const dateFrom = encodeURIComponent(getDateRangeBounds().start.toISOString());
+    const cf = getCompanyFilters();
+    let url = '/api/dashboard?date_from=' + dateFrom;
+    if (cf.industry)  url += '&industry='  + encodeURIComponent(cf.industry);
+    if (cf.country)   url += '&country='   + encodeURIComponent(cf.country);
+    if (cf.employees) url += '&employees=' + encodeURIComponent(cf.employees);
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'API error');
+    dashData = json.data;
+    render(dashData);
+    setStatus('live', 'MCP Connected');
+    hideError();
+  } catch (err) {
+    setStatus('error', 'API Error');
+    showError(err.message);
+  }
+}
+
+async function refreshData() {
+  const icon = document.getElementById('refresh-icon');
+  icon.style.animation = 'spin 1s linear infinite';
+  icon.style.display = 'inline-block';
+  setStatus('loading', 'Refreshing…');
+  try {
+    const res  = await fetch('/api/refresh', { method: 'POST' });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Refresh failed');
+    dashData = json.data;
+    render(dashData);
+    setStatus('live', 'MCP Connected');
+    hideError();
+  } catch (err) {
+    setStatus('error', 'Refresh Failed');
+    showError(err.message);
+  } finally {
+    icon.style.animation = '';
+  }
+}
+
+// -------------------------------------------------------
+// Render helpers
+// -------------------------------------------------------
+function fmt(n) { return Number(n).toLocaleString(); }
+
+let searchPending = false;
+
+function renderVendorHeader(d) {
+  const vendor = d.vendor;
+  const products = d.my_products || allVendorProducts;
+  const icon = document.getElementById('vendor-icon');
+  const name = document.getElementById('vendor-name');
+  const subtitle = document.getElementById('vendor-subtitle');
+
+  if (vendor) {
+    const initials = vendor.name.length <= 3 ? vendor.name : vendor.name.substring(0, 2).toUpperCase();
+    icon.textContent = initials;
+    icon.classList.remove('skeleton');
+    name.textContent = vendor.name;
+    name.classList.remove('skeleton', 'h-7', 'w-24');
+    subtitle.textContent = `${products.length} product${products.length !== 1 ? 's' : ''} · ${vendor.total_products || products.length} total on G2`;
+  }
+
+  if (products.length > 0) populateProductPicker(products);
+}
+
+// -------------------------------------------------------
+// Multi-select product picker
+// -------------------------------------------------------
+function toggleProductPicker() {
+  const dropdown = document.getElementById('product-picker-dropdown');
+  dropdown.classList.toggle('hidden');
+}
+
+function populateProductPicker(products) {
+  allVendorProducts = products;
+  document.getElementById('product-picker-count').textContent = `${products.length} products`;
+  const list = document.getElementById('product-picker-list');
+  list.innerHTML = products.map(p => `
+    <label class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low cursor-pointer">
+      <input type="checkbox" value="${p.id}"
+        class="w-4 h-4 accent-[#FF492C] cursor-pointer rounded"
+        onchange="onProductCheckboxChange()"
+        ${selectedProductIds.includes(p.id) ? 'checked' : ''}>
+      <div class="flex-grow min-w-0">
+        <p class="text-sm font-semibold truncate">${p.name}</p>
+        <p class="text-xs text-on-surface-variant">${p.review_count ? fmt(p.review_count) + ' reviews' : (p.slug || '')}</p>
+      </div>
+    </label>
+  `).join('');
+  updateProductPickerLabel();
+}
+
+function onProductCheckboxChange() {
+  const checkboxes = document.querySelectorAll('#product-picker-list input[type="checkbox"]:checked');
+  selectedProductIds = Array.from(checkboxes).map(cb => cb.value);
+  updateProductPickerLabel();
+}
+
+function updateProductPickerLabel() {
+  const label = document.getElementById('product-picker-label');
+  if (selectedProductIds.length === 0) {
+    label.textContent = `All Products (${allVendorProducts.length || ''})`;
+  } else if (selectedProductIds.length === 1) {
+    const p = allVendorProducts.find(p => p.id === selectedProductIds[0]);
+    label.textContent = p ? p.name : '1 product';
+  } else {
+    label.textContent = `${selectedProductIds.length} products selected`;
+  }
+}
+
+function selectAllProducts() {
+  document.querySelectorAll('#product-picker-list input[type="checkbox"]').forEach(cb => cb.checked = true);
+  selectedProductIds = allVendorProducts.map(p => p.id);
+  updateProductPickerLabel();
+}
+
+function clearProducts() {
+  document.querySelectorAll('#product-picker-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+  selectedProductIds = [];
+  updateProductPickerLabel();
+}
+
+async function applyProductSelection() {
+  document.getElementById('product-picker-dropdown').classList.add('hidden');
+  if (selectedProductIds.length === 0) {
+    loadDashboard();
+    return;
+  }
+  await loadMultiProductIntent(selectedProductIds);
+}
+
+async function loadMultiProductIntent(productIds) {
+  document.getElementById('search-loading').classList.remove('hidden');
+  const label = productIds.length === 1
+    ? (allVendorProducts.find(p => p.id === productIds[0])?.name || 'Product')
+    : `${productIds.length} products`;
+  setStatus('loading', `Loading ${label}…`);
+
+  try {
+    const cf = getCompanyFilters();
+    const res = await fetch('/api/products/intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_ids: productIds,
+        date_from: getDateRangeBounds().start.toISOString(),
+        ...cf.industry  && { industry: cf.industry },
+        ...cf.country   && { country: cf.country },
+        ...cf.employees && { employees: cf.employees },
+      }),
+    });
+    const json = await res.json();
+
+    if (!json.ok && json.error === 'not_cached') {
+      const missingNames = (json.missing || []).slice(0, 3).map(id => {
+        const p = allVendorProducts.find(p => p.id === id);
+        return p ? p.name : id;
+      });
+      const extra = (json.missing || []).length > 3 ? ` + ${(json.missing || []).length - 3} more` : '';
+      setStatus('error', 'Not cached');
+      showError(`Intent data not cached for: ${missingNames.join(', ')}${extra}. Ask Claude in the analyze bar to fetch it.`);
+      return;
+    }
+    if (!json.ok) throw new Error(json.error);
+
+    lastLoadedProductIds = productIds;
+    lastLoadedVendor = null;
+    dashData = json.data;
+    dashData.my_products = allVendorProducts;
+    dashData._per_product = json.per_product || [];
+    hideError();
+
+    render(dashData);
+    setStatus('live', label);
+    showTab('funnel');
+  } catch (err) {
+    setStatus('error', 'Load Failed');
+    showError(err.message);
+  } finally {
+    document.getElementById('search-loading').classList.add('hidden');
+  }
+}
+
+async function loadVendorIntent(vendor, products) {
+  // Auto-load all cached intent for a vendor when it's selected.
+  // Quietly handles partial data — not every product will be cached.
+  const productIds = products.map(p => p.id);
+  document.getElementById('search-loading').classList.remove('hidden');
+  setStatus('loading', `Loading ${vendor.name} intent…`);
+
+  try {
+    const cf = getCompanyFilters();
+    const res = await fetch('/api/products/intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_ids: productIds,
+        date_from: getDateRangeBounds().start.toISOString(),
+        ...cf.industry  && { industry: cf.industry },
+        ...cf.country   && { country: cf.country },
+        ...cf.employees && { employees: cf.employees },
+      }),
+    });
+    const json = await res.json();
+
+    if (!json.ok && json.error === 'not_cached') {
+      setStatus('error', 'No cached data');
+      showError(`No intent data cached for ${vendor.name}. Click a product above to load, or ask Claude to fetch it.`);
+      return;
+    }
+    if (!json.ok) throw new Error(json.error);
+
+    lastLoadedProductIds = productIds;
+    lastLoadedVendor = vendor;
+    dashData = json.data;
+    dashData.my_products = products;
+    dashData._per_product = json.per_product || [];
+    hideError();
+
+    const cachedCount = productIds.length - (json.missing?.length || 0);
+    render(dashData);
+    setStatus('live', `${vendor.name} · ${cachedCount} product${cachedCount !== 1 ? 's' : ''}`);
+    showTab('funnel');
+  } catch (err) {
+    setStatus('error', 'Load Failed');
+    showError(err.message);
+  } finally {
+    document.getElementById('search-loading').classList.add('hidden');
+  }
+}
+
+async function searchVendor(vendorName) {
+  const input = document.getElementById('vendor-search');
+  const q = vendorName || input.value.trim();
+  if (!q || searchPending) return;
+
+  searchPending = true;
+  document.getElementById('search-loading').classList.remove('hidden');
+  const resultsEl = document.getElementById('vendor-search-results');
+  resultsEl.classList.add('hidden');
+
+  try {
+    const res = await fetch(`/api/search/vendor?q=${encodeURIComponent(q)}`);
+    const json = await res.json();
+
+    // Handle cache miss — show available vendors
+    if (!json.ok && json.error === 'not_cached') {
+      const avail = json.available_vendors || [];
+      resultsEl.innerHTML = `
+        <div class="p-4">
+          <p class="text-sm text-on-surface-variant mb-2">No cached data for "<strong>${q}</strong>".</p>
+          <p class="text-xs text-on-surface-variant mb-3">Ask Claude in the analyze bar: <em>"Fetch ${q} vendor data"</em></p>
+          ${avail.length ? `
+            <p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Available vendors:</p>
+            ${avail.map(v => `
+              <button onclick="searchVendor('${v.name.replace(/'/g, "\\'")}')"
+                class="w-full text-left px-3 py-2 hover:bg-surface-container-low transition-colors flex items-center justify-between rounded-lg mb-1">
+                <span class="text-sm font-semibold">${v.name}</span>
+                <span class="text-xs text-on-surface-variant">${v.total_products} products</span>
+              </button>
+            `).join('')}
+          ` : ''}
+        </div>
+      `;
+      resultsEl.classList.remove('hidden');
+      return;
+    }
+
+    if (!json.ok) throw new Error(json.error);
+
+    const { vendor, products } = json.data;
+    if (products.length === 0) {
+      resultsEl.innerHTML = `<div class="p-4 text-sm text-on-surface-variant">No products found for "<strong>${q}</strong>". Try the exact vendor name.</div>`;
+      resultsEl.classList.remove('hidden');
+      return;
+    }
+
+    // Update vendor context
+    allVendorProducts = products;
+    selectedProductIds = [];
+    if (dashData) {
+      dashData.vendor = vendor;
+      dashData.my_products = products;
+    }
+
+    // Show results dropdown — top products for quick single-click load
+    const previewProducts = products.slice(0, 20);
+    resultsEl.innerHTML = `
+      <div class="p-3 border-b border-outline-variant/10 flex items-center justify-between">
+        <p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">${vendor.name} · ${products.length} products</p>
+        <button onclick="openProductPicker()" class="text-xs font-bold text-g2-red hover:underline flex items-center gap-1">
+          Multi-select
+          <span class="material-symbols-outlined text-xs">checklist</span>
+        </button>
+      </div>
+      ${previewProducts.map(p => `
+        <button onclick="loadProductIntent('${p.id}', '${p.name.replace(/'/g, "\\'")}', '${vendor.name.replace(/'/g, "\\'")}')"
+          class="w-full text-left px-4 py-3 hover:bg-surface-container-low transition-colors flex items-center justify-between gap-2 border-b border-outline-variant/5 last:border-0">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold truncate">${p.name}</p>
+            <p class="text-xs text-on-surface-variant">${p.slug || ''}</p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            ${p.star_rating ? `<span class="text-xs text-g2-yellow font-bold">★ ${p.star_rating}</span>` : ''}
+            ${p.review_count ? `<span class="text-xs text-on-surface-variant">${p.review_count} reviews</span>` : ''}
+            <span class="material-symbols-outlined text-g2-red text-sm">arrow_forward</span>
+          </div>
+        </button>
+      `).join('')}
+      ${products.length > 20 ? `<div class="p-3 text-xs text-on-surface-variant text-center">+ ${products.length - 20} more — use Multi-select to browse all</div>` : ''}
+    `;
+    resultsEl.classList.remove('hidden');
+
+    // Update header (populates the product picker)
+    renderVendorHeader(dashData || { vendor, my_products: products });
+    input.value = '';
+
+    // Auto-load aggregated intent for this vendor (all cached products)
+    loadVendorIntent(vendor, products);
+  } catch (err) {
+    const resultsEl = document.getElementById('vendor-search-results');
+    resultsEl.innerHTML = `<div class="p-4 text-sm text-error">${err.message}</div>`;
+    resultsEl.classList.remove('hidden');
+  } finally {
+    searchPending = false;
+    document.getElementById('search-loading').classList.add('hidden');
+  }
+}
+
+async function loadProductIntent(productId, productName, vendorName) {
+  document.getElementById('vendor-search-results').classList.add('hidden');
+  // Set single product as selected in the picker
+  selectedProductIds = [productId];
+  updateProductPickerLabel();
+  // Sync checkbox if picker is populated
+  document.querySelectorAll('#product-picker-list input[type="checkbox"]').forEach(cb => {
+    cb.checked = cb.value === productId;
+  });
+
+  await loadMultiProductIntent([productId]);
+}
+
+function openProductPicker() {
+  document.getElementById('vendor-search-results').classList.add('hidden');
+  document.getElementById('product-picker-dropdown').classList.remove('hidden');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  const results = document.getElementById('vendor-search-results');
+  const search  = document.getElementById('vendor-search');
+  if (!results.contains(e.target) && e.target !== search) {
+    results.classList.add('hidden');
+  }
+  const picker = document.getElementById('product-picker-container');
+  if (picker && !picker.contains(e.target)) {
+    document.getElementById('product-picker-dropdown').classList.add('hidden');
+  }
+});
+
+// -------------------------------------------------------
+// Client-side filter engine — derives all metrics from current filter state
+// -------------------------------------------------------
+const _NA  = new Set(['United States','United States of America','Canada','Mexico','Puerto Rico','Cuba','Jamaica']);
+const _EMEA = new Set(['United Kingdom','UK','Germany','France','Ireland','Netherlands','Spain','Italy','Sweden','Norway','Denmark','Finland','Belgium','Switzerland','Austria','Poland','Portugal','Israel','South Africa','Nigeria','UAE','United Arab Emirates','Saudi Arabia','Egypt','Turkey','Greece','Czech Republic','Hungary','Romania','Ukraine','Russia','Pakistan','Luxembourg','Singapore','India']);
+const _APAC = new Set(['India','China','Japan','Australia','South Korea','Singapore','Hong Kong','New Zealand','Philippines','Indonesia','Malaysia','Thailand','Vietnam','Taiwan','Bangladesh','Sri Lanka','Myanmar','Nepal']);
+const _LATAM = new Set(['Brazil','Colombia','Argentina','Chile','Peru','Ecuador','Venezuela','Bolivia','Uruguay','Paraguay','Costa Rica','Panama','Guatemala','Honduras','El Salvador','Nicaragua','Dominican Republic']);
+
+function _countryToRegion(country) {
+  if (!country) return 'Other';
+  if (_NA.has(country))   return 'North America';
+  if (_EMEA.has(country)) return 'EMEA';
+  if (_APAC.has(country)) return 'APAC';
+  if (_LATAM.has(country))return 'LATAM';
+  return 'Other';
+}
+
+function _deriveRegional(companies, fallback) {
+  if (!companies || !companies.length) return fallback;
+  const counts = { 'North America': 0, 'EMEA': 0, 'APAC': 0, 'LATAM': 0, 'Other': 0 };
+  companies.forEach(c => { counts[_countryToRegion(c.country)]++; });
+  const total = companies.length || 1;
+  return Object.fromEntries(
+    Object.entries(counts).map(([k, v]) => [k, { count: v, pct: Math.round(v / total * 1000) / 10 }])
+  );
+}
+
+// Period → weeks mapping. Snapshot baseline is always 6M (26 weeks).
+const _PERIOD_WEEKS = { '1m': 4, '3m': 13, '6m': 26, '1y': 52 };
+const _BASELINE_WEEKS = 26;
+
+function computeFilteredView(raw) {
+  if (!raw) return raw;
+  const cf = getCompanyFilters();
+  const hasCompanyFilter = !!(cf.industry || cf.country || cf.employees);
+  const dateFrom = getDateRangeBounds().start.toISOString().slice(0, 10);
+
+  // Period scaling: shorter windows contain fewer cumulative companies.
+  // Snapshot data is a 6M baseline; scale down for shorter periods.
+  const periodWeeks = _PERIOD_WEEKS[selectedDateRange] || _BASELINE_WEEKS;
+  const periodScale = Math.min(1, periodWeeks / _BASELINE_WEEKS); // never extrapolate above baseline
+  const hasPeriodScale = periodScale < 1;
+
+  // Always preserve original companies list for "X of Y" badge
+  const allCompanies = raw._all_companies || raw.top_companies || [];
+
+  // Apply company filters
+  const filtered = hasCompanyFilter ? allCompanies.filter(c => {
+    if (cf.industry  && !(c.industry  || '').toLowerCase().includes(cf.industry.toLowerCase()))  return false;
+    if (cf.country   && !(c.country   || '').toLowerCase().includes(cf.country.toLowerCase()))   return false;
+    if (cf.employees && !(c.employees || '').toLowerCase().includes(cf.employees.toLowerCase())) return false;
+    return true;
+  }) : allCompanies;
+
+  // Filter weekly trend by date
+  const allTrend = raw.weekly_trend || [];
+  const filteredTrend = allTrend.filter(w => (w.week || '') >= dateFrom);
+  const trend = filteredTrend.length ? filteredTrend : allTrend;
+
+  // Compound scaling factor: company filter × period window
+  const companyRatio = allCompanies.length ? filtered.length / allCompanies.length : 1;
+  const totalRatio = companyRatio * periodScale;
+  const hasAnyFilter = hasCompanyFilter || hasPeriodScale;
+
+  if (!hasAnyFilter) {
+    return { ...raw, _all_companies: allCompanies, top_companies: allCompanies, weekly_trend: trend };
+  }
+
+  // Scale funnel counts by compound ratio
+  const rawFunnel = raw.funnel || {};
+  const funnel = {
+    ...rawFunnel,
+    awareness:     Math.max(1, Math.round((rawFunnel.awareness     || 0) * totalRatio)),
+    consideration: Math.max(0, Math.round((rawFunnel.consideration || 0) * totalRatio)),
+    decision:      Math.max(0, Math.round((rawFunnel.decision      || 0) * totalRatio)),
+  };
+
+  // Re-derive regional from filtered companies (geography mix doesn't change with period)
+  const regional = _deriveRegional(filtered, raw.regional);
+
+  // Intent score: weighted avg of filtered companies' scores.
+  // Score represents quality/recency of intent — not scaled by period.
+  const avgScore = filtered.length
+    ? Math.round(filtered.reduce((s, c) => s + (c.score || 0), 0) / filtered.length * 10) / 10
+    : raw.active_intent_score;
+
+  // Scale competitor counts by total ratio
+  const competitors = (raw.competitors || []).map(c => ({
+    ...c,
+    companies: Math.max(0, Math.round((c.companies || 0) * totalRatio)),
+    activity:  Math.max(0, Math.round((c.activity  || 0) * totalRatio)),
+  }));
+
+  // WoW from filtered trend
+  let wow = raw.wow_pct;
+  if (trend.length >= 2) {
+    const curr = trend[0].companies, prev = trend[1].companies;
+    wow = Math.round((curr - prev) / (prev || 1) * 1000) / 10;
+  }
+
+  // Scale visible companies list by period (fewer companies shown for shorter windows)
+  const visibleCount = Math.max(1, Math.round(filtered.length * periodScale));
+  const visibleCompanies = filtered.slice(0, visibleCount);
+
+  return {
+    ...raw,
+    _all_companies: allCompanies,
+    top_companies:  visibleCompanies,
+    funnel, regional, competitors,
+    active_intent_score: avgScore,
+    wow_pct: wow,
+    weekly_trend: trend,
+    _filtered: hasAnyFilter,
+    _period_scale: periodScale,
+    _company_ratio: companyRatio,
+  };
+}
+
+function render(d) {
+  // Build synthetic subscription for cross-vendor products if not present
+  if (!d.subscription && d._per_product && d._per_product.length > 0) {
+    d.subscription = buildSyntheticSubscription(d._per_product, d.my_products || allVendorProducts);
+  }
+
+  // Apply current filters client-side — makes ALL metrics respond to every filter change
+  const fd = computeFilteredView(d);
+
+  // Update active filters display (pass snapshot mode from server response)
+  updateActiveFiltersBar(!!d._snapshot_mode);
+
+  // Vendor header (uses original d — not filtered)
+  renderVendorHeader(d);
+
+  // Score
+  document.getElementById('intent-score').textContent = fd.active_intent_score + '%';
+  document.getElementById('intent-score').classList.remove('skeleton','h-12','w-32');
+
+  // WoW
+  const wow = fd.wow_pct;
+  const wowEl = document.getElementById('wow-badge');
+  if (wow > 0) {
+    wowEl.innerHTML = `<span class="material-symbols-outlined text-sm">trending_up</span>+${wow}%`;
+    wowEl.className = 'font-bold flex items-center gap-1 text-g2-teal';
+  } else {
+    wowEl.innerHTML = `<span class="material-symbols-outlined text-sm">trending_down</span>${wow}%`;
+    wowEl.className = 'font-bold flex items-center gap-1 text-error';
+  }
+
+  // Funnel
+  const f = fd.funnel;
+  const maxCount = f.awareness || 1;
+  document.getElementById('awareness-count').textContent     = fmt(f.awareness)     + ' companies';
+  document.getElementById('consideration-count').textContent = fmt(f.consideration) + ' companies';
+  document.getElementById('decision-count').textContent      = fmt(f.decision)      + ' companies';
+  setTimeout(() => {
+    document.getElementById('awareness-bar').style.width     = '85%';
+    document.getElementById('consideration-bar').style.width = Math.round(f.consideration / maxCount * 85) + '%';
+    document.getElementById('decision-bar').style.width      = Math.round(f.decision      / maxCount * 85) + '%';
+  }, 100);
+
+  // Fetched at
+  const ts = new Date(d.fetched_at);
+  document.getElementById('fetched-at').textContent = 'Data as of ' + ts.toLocaleTimeString();
+
+  // Competitors (filtered)
+  renderCompetitors(fd.competitors);
+
+  // Trend sparkline (date-filtered)
+  renderTrend(fd.weekly_trend, fd.wow_pct);
+
+  // Regional sidebar (re-derived from filtered companies)
+  renderRegional(fd.regional);
+
+  // Render active tab — pass fd so each tab sees filtered data
+  if (currentTab === 'companies')     renderCompanies(fd);
+  if (currentTab === 'regions')       renderRegionsDetail(fd);
+  if (currentTab === 'categories')    renderCategories(d);     // subscription data — not filtered
+  if (currentTab === 'subscriptions') renderSubscriptions(d);  // subscription data — not filtered
+}
+
+function buildSyntheticSubscription(perProduct, allProducts) {
+  const productMap = Object.fromEntries((allProducts || []).map(p => [p.id, p]));
+  const products = perProduct.map(pp => {
+    const d = pp.data;
+    const meta = productMap[pp.product_id] || {};
+    const raw = d.funnel?.raw || {};
+    const totalActivity = Object.values(raw).reduce((s, v) => s + (v.total_activity || 0), 0);
+    return {
+      id: pp.product_id,
+      name: d.product?.name || meta.name || pp.product_id,
+      slug: d.product?.slug || meta.slug || '',
+      has_intent: true,
+      star_rating: meta.star_rating,
+      review_count: meta.review_count,
+      signal_breakdown: raw,
+      total_activity: totalActivity,
+      total_companies: d.funnel?.awareness || 0,
+      subscribed_categories: [],  // not available cross-vendor
+      _synthetic: true,
+    };
+  });
+  return {
+    products,
+    summary: {
+      total_products: products.length,
+      products_with_intent: products.length,
+      products_without_intent: 0,
+      total_subscribed_categories: null,
+      total_categories: null,
+    },
+  };
+}
+
+function renderCompetitors(competitors) {
+  const el = document.getElementById('competitors-list');
+  if (!competitors || competitors.length === 0) {
+    el.innerHTML = '<p class="text-xs text-on-surface-variant">No competitor data available.</p>';
+    return;
+  }
+  const maxCo = competitors[0].companies || 1;
+  el.innerHTML = competitors.slice(0, 6).map(c => `
+    <div class="flex items-center gap-2 text-xs">
+      <div class="flex-grow">
+        <div class="flex justify-between mb-1">
+          <span class="font-semibold truncate max-w-[150px]" title="${c.name}">${c.name}</span>
+          <span class="text-on-surface-variant">${fmt(c.companies)} co.</span>
+        </div>
+        <div class="h-1.5 w-full bg-surface-container rounded-full">
+          <div class="h-full bg-g2-red/60 rounded-full" style="width:${Math.round(c.companies/maxCo*100)}%"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTrend(trend, wow) {
+  const container = document.getElementById('trend-bars');
+  if (!trend || trend.length === 0) { container.innerHTML = ''; return; }
+  const maxAct = Math.max(...trend.map(t => t.activity));
+  container.innerHTML = trend.slice().reverse().map((t, i) => {
+    const pct = Math.round(t.activity / maxAct * 100);
+    const week = new Date(t.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const isLatest = i === trend.length - 1;
+    return `
+      <div class="flex flex-col items-center gap-1 flex-1" title="${week}: ${fmt(t.activity)} signals">
+        <div class="w-full rounded-t-sm ${isLatest ? 'bg-g2-red' : 'bg-g2-red/30'} transition-all duration-500"
+             style="height:${pct}%"></div>
+        <span class="text-[9px] text-on-surface-variant">${week.split(' ')[1]}</span>
+      </div>`;
+  }).join('');
+
+  const latest = trend[0];
+  const prev   = trend[1];
+  const pctChange = prev ? Math.round((latest.companies - prev.companies) / prev.companies * 100) : 0;
+  document.getElementById('trend-summary').innerHTML =
+    `This week: <strong>${fmt(latest.companies)}</strong> active companies, ` +
+    `<strong>${fmt(latest.activity)}</strong> signals. ` +
+    `${pctChange >= 0 ? '▲' : '▼'} ${Math.abs(pctChange)}% vs prior week.`;
+}
+
+const REGION_COLORS = {
+  'North America': 'bg-g2-purple',
+  'EMEA':          'bg-g2-teal',
+  'APAC':          'bg-g2-yellow',
+  'LATAM':         'bg-g2-blue',
+  'Other':         'bg-surface-container-highest',
+};
+const REGION_TEXT = {
+  'North America': 'text-g2-purple',
+  'EMEA':          'text-g2-teal',
+  'APAC':          'text-[#b89b00]',
+  'LATAM':         'text-g2-blue',
+  'Other':         'text-on-surface-variant',
+};
+
+function renderRegional(regional) {
+  const el = document.getElementById('regional-list');
+  const regions = ['North America','EMEA','APAC','LATAM'].filter(r => regional[r]);
+  el.innerHTML = regions.map(r => {
+    const { pct, count } = regional[r];
+    return `
+      <div class="space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="font-medium">${r}</span>
+          <span class="font-bold ${REGION_TEXT[r]}">${pct}%</span>
+        </div>
+        <div class="h-2 w-full bg-surface-container rounded-full">
+          <div class="h-full ${REGION_COLORS[r]} rounded-full transition-all duration-700" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Insight note
+  const top = regions.sort((a,b) => (regional[b]?.pct||0) - (regional[a]?.pct||0))[0];
+  const topCount = regional[top]?.count || 0;
+  document.getElementById('region-note').innerHTML =
+    `<p class="text-xs text-g2-dark-blue italic leading-relaxed">
+       ${top} leads with <strong>${fmt(topCount)}</strong> active companies —
+       ${regional[top]?.pct}% of all buyer intent signals.
+     </p>`;
+}
+
+// -------------------------------------------------------
+// Company filters
+// -------------------------------------------------------
+let _companyFilterTimer = null;
+
+function applyCompanyFilters() {
+  const hasFilters = document.getElementById('filter-industry').value ||
+                     document.getElementById('filter-country').value ||
+                     document.getElementById('filter-employees').value;
+  document.getElementById('clear-company-filters').classList.toggle('hidden', !hasFilters);
+
+  // Immediately re-render ALL tabs with client-side filtering applied
+  if (dashData) render(dashData);
+}
+
+function clearCompanyFilters() {
+  document.getElementById('filter-industry').value = '';
+  document.getElementById('filter-country').value = '';
+  document.getElementById('filter-employees').value = '';
+  document.getElementById('clear-company-filters').classList.add('hidden');
+  document.getElementById('company-filter-count').classList.add('hidden');
+  if (dashData) render(dashData);
+}
+
+function getFilteredCompanies(companies) {
+  const industry  = (document.getElementById('filter-industry')?.value  || '').toLowerCase().trim();
+  const country   = (document.getElementById('filter-country')?.value   || '').toLowerCase().trim();
+  const employees = (document.getElementById('filter-employees')?.value || '').toLowerCase().trim();
+  if (!industry && !country && !employees) return companies;
+  return companies.filter(c => {
+    if (industry  && !(c.industry  || '').toLowerCase().includes(industry))  return false;
+    if (country   && !(c.country   || '').toLowerCase().includes(country))   return false;
+    if (employees && !(c.employees || '').toLowerCase().includes(employees)) return false;
+    return true;
+  });
+}
+
+function downloadCompaniesCSV() {
+  const companies = dashData?.top_companies || [];
+  if (!companies.length) return;
+  const filtered = getFilteredCompanies(companies);
+  const headers = ['Company', 'Domain', 'Industry', 'Country', 'Employees', 'Intent Score', 'Signals'];
+  const rows = filtered.map(c => [
+    `"${(c.name || '').replace(/"/g,'""')}"`,
+    c.domain || '',
+    `"${(c.industry || '').replace(/"/g,'""')}"`,
+    c.country || '',
+    c.employees || '',
+    c.score || 0,
+    c.activity || 0,
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  const vendor = dashData?.vendor?.name || 'g2';
+  const period = document.getElementById('date-range-label')?.textContent || '';
+  a.download = `intent-companies-${vendor.replace(/\s+/g,'-').toLowerCase()}-${period.replace(/\s+/g,'')}.csv`;
+  a.click();
+}
+
+function renderCompanies(d) {
+  // top_companies is already filtered by computeFilteredView; _all_companies is the full list
+  const companies = d.top_companies || [];
+  const totalCount = (d._all_companies || d.top_companies || []).length;
+  const el = document.getElementById('companies-table');
+
+  // Update filter count badge
+  const countEl = document.getElementById('company-filter-count');
+  if (d._filtered && companies.length < totalCount) {
+    countEl.textContent = `Showing ${companies.length} of ${totalCount}`;
+    countEl.classList.remove('hidden');
+  } else {
+    countEl.classList.add('hidden');
+  }
+
+  if (!companies.length) {
+    el.innerHTML = '<p class="p-6 text-sm text-on-surface-variant">No companies match the current filters.</p>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-surface-container-low text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+      <div class="col-span-4">Company</div>
+      <div class="col-span-3">Industry</div>
+      <div class="col-span-2">Country</div>
+      <div class="col-span-2">Intent Score</div>
+      <div class="col-span-1 text-right">Signals</div>
+    </div>
+    ${companies.map(c => {
+      const score = c.score || 0;
+      const scoreColor = score >= 80 ? 'text-error font-bold' : score >= 60 ? 'text-g2-yellow font-semibold' : 'text-on-surface';
+      return `
+        <div class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-surface-container-low transition-colors items-center">
+          <div class="col-span-4">
+            <p class="font-semibold text-sm">${c.name || '—'}</p>
+            <p class="text-xs text-on-surface-variant">${c.domain || ''}</p>
+          </div>
+          <div class="col-span-3 text-xs text-on-surface-variant truncate" title="${c.industry||''}">${c.industry || '—'}</div>
+          <div class="col-span-2 text-xs">${c.country || '—'}</div>
+          <div class="col-span-2">
+            <div class="flex items-center gap-2">
+              <div class="h-1.5 flex-grow bg-surface-container rounded-full">
+                <div class="h-full bg-g2-red rounded-full" style="width:${score}%"></div>
+              </div>
+              <span class="text-xs ${scoreColor} w-8 text-right">${score}</span>
+            </div>
+          </div>
+          <div class="col-span-1 text-right text-xs font-semibold">${fmt(c.activity)}</div>
+        </div>`;
+    }).join('')}`;
+}
+
+// -------------------------------------------------------
+// Categories tab
+// -------------------------------------------------------
+function renderCategories(d) {
+  const el = document.getElementById('categories-table');
+  const badge = document.getElementById('categories-count-badge');
+
+  // Build categories from subscription data (subscribed_categories per product)
+  // plus the signal_type=category activity from the funnel
+  const sub = d.subscription;
+  const categoryMap = {};
+
+  // From subscription products' subscribed_categories
+  if (sub && sub.products) {
+    sub.products.forEach(p => {
+      (p.subscribed_categories || []).forEach(cat => {
+        if (!cat.name) return;
+        if (!categoryMap[cat.name]) {
+          categoryMap[cat.name] = { name: cat.name, products: [], companies: 0, activity: 0 };
+        }
+        if (!categoryMap[cat.name].products.includes(p.name)) {
+          categoryMap[cat.name].products.push(p.name);
+        }
+      });
+    });
+  }
+
+  // From top_companies industries — derive category-level groupings from competitors
+  // and from funnel raw category signals
+  const categorySignals = d.funnel?.raw?.category || {};
+  const totalCategoryCompanies = categorySignals.company_count || 0;
+  const totalCategoryActivity  = categorySignals.total_activity || 0;
+
+  // If we have subscribed categories, distribute the category signal proportionally
+  const catNames = Object.keys(categoryMap);
+  if (catNames.length > 0 && totalCategoryCompanies > 0) {
+    const perCat = Math.round(totalCategoryCompanies / catNames.length);
+    const perAct = Math.round(totalCategoryActivity / catNames.length);
+    catNames.forEach(name => {
+      categoryMap[name].companies = perCat;
+      categoryMap[name].activity = perAct;
+    });
+  }
+
+  // Also surface competitor products as cross-category signals
+  const competitors = d.competitors || [];
+  competitors.forEach(comp => {
+    const key = `Also: ${comp.name}`;
+    categoryMap[key] = {
+      name: comp.name,
+      products: [comp.name],
+      companies: comp.companies || 0,
+      activity: comp.activity || 0,
+      isCompetitor: true,
+    };
+  });
+
+  const categories = Object.values(categoryMap).sort((a,b) => b.companies - a.companies);
+
+  if (!categories.length) {
+    el.innerHTML = '<p class="p-6 text-sm text-on-surface-variant">No category data available. Load a vendor with subscription data to see this view.</p>';
+    badge.textContent = '';
+    return;
+  }
+
+  const maxCompanies = Math.max(...categories.map(c => c.companies), 1);
+  badge.textContent = `${categories.filter(c => !c.isCompetitor).length} categories`;
+
+  // Split into subscribed categories and competitive products sections
+  const subscribed = categories.filter(c => !c.isCompetitor);
+  const competitive = categories.filter(c => c.isCompetitor);
+
+  const renderRows = (items) => items.map(cat => {
+    const pct = Math.round((cat.companies / maxCompanies) * 100);
+    const productNames = cat.products.slice(0, 3).join(', ') + (cat.products.length > 3 ? ` +${cat.products.length-3}` : '');
+    return `
+      <div class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-surface-container-low transition-colors items-center">
+        <div class="col-span-4">
+          <p class="font-semibold text-sm">${cat.name}</p>
+          ${productNames ? `<p class="text-xs text-on-surface-variant truncate">${productNames}</p>` : ''}
+        </div>
+        <div class="col-span-5">
+          <div class="h-2 w-full bg-surface-container rounded-full">
+            <div class="h-full bg-g2-red/70 rounded-full transition-all duration-500" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="col-span-2 text-right text-sm font-semibold">${cat.companies ? fmt(cat.companies) : '—'}</div>
+        <div class="col-span-1 text-right text-xs text-on-surface-variant">${cat.activity ? fmt(cat.activity) : ''}</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-surface-container-low text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+      <div class="col-span-4">Category</div>
+      <div class="col-span-5">Companies</div>
+      <div class="col-span-2 text-right">Companies</div>
+      <div class="col-span-1 text-right">Signals</div>
+    </div>
+    ${subscribed.length ? `
+      <div class="px-6 py-2 bg-surface-container-low/50 text-[10px] uppercase tracking-widest font-semibold text-on-surface-variant/60 border-b border-outline-variant/10">
+        Subscribed Categories
+      </div>
+      ${renderRows(subscribed)}
+    ` : ''}
+    ${competitive.length ? `
+      <div class="px-6 py-2 bg-surface-container-low/50 text-[10px] uppercase tracking-widest font-semibold text-on-surface-variant/60 border-b border-outline-variant/10">
+        Also Evaluating (Competitive Products)
+      </div>
+      ${renderRows(competitive)}
+    ` : ''}
+  `;
+}
+
+function renderRegionsDetail(d) {
+  const regional = d.regional || {};
+  const el = document.getElementById('regions-detail');
+  const regions = Object.entries(regional).filter(([k]) => k !== 'Other').sort((a,b)=>b[1].count-a[1].count);
+  el.innerHTML = regions.map(([name, {count, pct}]) => `
+    <div class="p-6 bg-surface-container-low rounded-xl border border-outline-variant/10">
+      <div class="flex justify-between items-start mb-3">
+        <h4 class="font-bold text-on-surface">${name}</h4>
+        <span class="text-2xl font-extrabold ${REGION_TEXT[name]||'text-on-surface'}">${pct}%</span>
+      </div>
+      <p class="text-sm text-on-surface-variant mb-3">${fmt(count)} active companies</p>
+      <div class="h-2 w-full bg-surface-container rounded-full">
+        <div class="h-full ${REGION_COLORS[name]||'bg-g2-red'} rounded-full" style="width:${pct}%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// -------------------------------------------------------
+// Status / errors
+// -------------------------------------------------------
+function setStatus(state, label) {
+  const badge = document.getElementById('status-badge');
+  const dot   = badge.querySelector('div');
+  const text  = badge.querySelector('span');
+  text.textContent = label;
+  dot.className = 'w-2 h-2 rounded-full ' + {
+    live:    'bg-g2-teal',
+    loading: 'bg-yellow-400 animate-pulse',
+    error:   'bg-error',
+  }[state];
+}
+
+function showError(msg) {
+  document.getElementById('error-banner').classList.remove('hidden');
+  document.getElementById('error-msg').textContent = msg;
+}
+function hideError() {
+  document.getElementById('error-banner').classList.add('hidden');
+}
+
+// -------------------------------------------------------
+// Subscription tab
+// -------------------------------------------------------
+function setSubFilter(filter) {
+  subFilter = filter;
+  ['all','subscribed','unsubscribed'].forEach(f => {
+    const btn = document.getElementById('filter-' + f);
+    if (f === filter) {
+      btn.className = 'px-4 py-1.5 rounded-full text-xs font-semibold bg-g2-red text-white transition-all';
+    } else {
+      btn.className = 'px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-all';
+    }
+  });
+  if (dashData) renderSubscriptions(dashData);
+}
+
+function renderSubscriptions(d) {
+  const sub = d.subscription;
+  if (!sub) {
+    document.getElementById('sub-products-list').innerHTML = '<p class="text-sm text-on-surface-variant p-6">No subscription data available.</p>';
+    return;
+  }
+
+  const isSynthetic = sub.products.some(p => p._synthetic);
+
+  // Summary cards
+  document.getElementById('sub-products-with').textContent = sub.summary.products_with_intent;
+  document.getElementById('sub-products-total').textContent = sub.summary.total_products;
+  document.getElementById('sub-cats-subscribed').textContent = sub.summary.total_subscribed_categories ?? '—';
+  document.getElementById('sub-cats-total').textContent = sub.summary.total_categories ?? '—';
+
+  const totalAct = sub.products.reduce((s, p) => s + (p.total_activity || 0), 0);
+  document.getElementById('sub-total-activity').textContent = fmt(totalAct);
+
+  const signalLabels = {
+    profile: 'Profile Views', compare: 'Comparisons', category: 'Category Browse',
+    competitors: 'Competitor Views', pricing: 'Pricing Views', vendors: 'Vendor Page'
+  };
+
+  // Render product cards
+  const el = document.getElementById('sub-products-list');
+  el.innerHTML = sub.products.map(product => {
+    const cats = product.subscribed_categories || [];
+    const filtered = subFilter === 'all' ? cats :
+      subFilter === 'subscribed' ? cats.filter(c => c.subscribed) :
+      cats.filter(c => !c.subscribed);
+    const subscribedCount = cats.filter(c => c.subscribed).length;
+    const coveragePct = cats.length ? Math.round(subscribedCount / cats.length * 100) : null;
+
+    const signals = product.signal_breakdown || {};
+    const signalEntries = Object.entries(signals).sort((a,b) => b[1].total_activity - a[1].total_activity);
+    const maxSignal = signalEntries.length ? signalEntries[0][1].total_activity : 1;
+
+    const reviewMeta = product.review_count
+      ? `<span class="text-xs text-on-surface-variant ml-2">· ★${product.star_rating || '?'} · ${fmt(product.review_count)} reviews</span>` : '';
+
+    return `
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+        <div class="p-6 border-b border-outline-variant/10 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-${product.has_intent ? 'g2-teal' : 'surface-container-high'} rounded-lg flex items-center justify-center">
+              <span class="material-symbols-outlined text-white text-sm">${product.has_intent ? 'verified' : 'block'}</span>
+            </div>
+            <div>
+              <h4 class="font-bold text-on-surface">${product.name}${reviewMeta}</h4>
+              <p class="text-xs text-on-surface-variant">${product.slug} · ${product.has_intent ? 'Intent Active' : 'No Intent'}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            ${coveragePct !== null ? `
+            <div class="text-right">
+              <span class="text-xs text-on-surface-variant">Coverage</span>
+              <p class="text-lg font-extrabold ${coveragePct === 100 ? 'text-g2-teal' : 'text-g2-purple'}">${coveragePct}%</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-on-surface-variant">Categories</span>
+              <p class="text-sm font-semibold"><span class="text-g2-teal">${subscribedCount}</span> / ${cats.length}</p>
+            </div>` : ''}
+            <div class="text-right">
+              <span class="text-xs text-on-surface-variant">Companies</span>
+              <p class="text-sm font-bold text-g2-teal">${fmt(product.total_companies || 0)}</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-on-surface-variant">Signals</span>
+              <p class="text-sm font-bold text-g2-red">${fmt(product.total_activity || 0)}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signal breakdown -->
+        ${signalEntries.length > 0 ? `
+        <div class="px-6 py-4 ${cats.length > 0 ? 'border-b border-outline-variant/10' : ''} bg-surface-container-low/30">
+          <p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Signal Breakdown</p>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
+            ${signalEntries.map(([type, data]) => `
+              <div class="flex items-center gap-2 text-xs">
+                <span class="w-28 truncate font-medium">${signalLabels[type] || type}</span>
+                <div class="flex-grow h-1.5 bg-surface-container rounded-full">
+                  <div class="h-full bg-g2-red/60 rounded-full" style="width:${Math.round(data.total_activity / maxSignal * 100)}%"></div>
+                </div>
+                <span class="text-on-surface-variant w-14 text-right">${fmt(data.company_count)} co.</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
+
+        <!-- Category grid (only for non-synthetic data) -->
+        ${cats.length > 0 ? `
+        <div class="p-6">
+          <p class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">
+            Categories ${subFilter !== 'all' ? `(${subFilter})` : ''} · ${filtered.length} shown
+          </p>
+          ${filtered.length === 0
+            ? `<p class="text-sm text-on-surface-variant italic">No ${subFilter === 'unsubscribed' ? 'unsubscribed' : ''} categories to show.</p>`
+            : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              ${filtered.map(cat => `
+                <div class="flex items-center gap-3 p-3 rounded-lg border ${cat.subscribed ? 'border-g2-teal/30 bg-g2-teal/5' : 'border-outline-variant/20 bg-surface-container-low'}">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${cat.subscribed ? 'bg-g2-teal' : 'bg-surface-container-high'}">
+                    <span class="material-symbols-outlined text-white text-xs">${cat.subscribed ? 'check' : 'close'}</span>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold truncate" title="${cat.name}">${cat.name}</p>
+                    <p class="text-[10px] ${cat.subscribed ? 'text-g2-teal' : 'text-on-surface-variant'}">${cat.subscribed ? 'Subscribed' : 'Not subscribed'}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`}
+        </div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Expansion / insight note
+  const note = document.getElementById('sub-expansion-note');
+  const noteText = document.getElementById('sub-expansion-text');
+  const allCats = sub.products.flatMap(p => p.subscribed_categories || []);
+  const unsub = allCats.filter(c => !c.subscribed);
+  if (isSynthetic) {
+    // Super-user cross-vendor view: show signal coverage summary instead of category note
+    const totalSignals = sub.products.reduce((s, p) => s + (p.total_activity || 0), 0);
+    const totalCos = sub.products.reduce((s, p) => s + (p.total_companies || 0), 0);
+    note.classList.remove('hidden');
+    noteText.innerHTML = `Super-user view — showing intent signal coverage across <strong>${sub.products.length} product${sub.products.length !== 1 ? 's' : ''}</strong> with cached data. ` +
+      `<strong>${fmt(totalCos)}</strong> unique companies active, <strong>${fmt(totalSignals)}</strong> total signals. ` +
+      `Ask Claude to fetch intent data for more products.`;
+  } else if (unsub.length > 0) {
+    note.classList.remove('hidden');
+    noteText.innerHTML = `<strong>${unsub.length} categories</strong> without intent access detected. ` +
+      `Adding intent for these categories would expand coverage to 100%. ` +
+      `Missing: ${unsub.map(c => c.name).join(', ')}.`;
+  } else {
+    const subCount = allCats.filter(c => c.subscribed).length;
+    note.classList.remove('hidden');
+    noteText.innerHTML = `Full coverage — all <strong>${subCount} categories</strong> have active intent subscriptions. ` +
+      `To identify expansion opportunities, cross-reference with Salesforce to confirm which categories are on the current contract vs. recently added.`;
+  }
+}
+
+// -------------------------------------------------------
+// Claude-powered query bar
+// -------------------------------------------------------
+let queryPending = false;
+let _activeChart = null;
+
+async function handleQuery() {
+  const input = document.getElementById('query-input');
+  const q = input.value.trim();
+  const resultWrap = document.getElementById('query-result');
+  const answerEl   = document.getElementById('query-answer');
+  const chartWrap  = document.getElementById('query-chart-wrap');
+  if (!q || queryPending) return;
+  if (!dashData) {
+    answerEl.textContent = 'Data is still loading. Please wait.';
+    resultWrap.classList.remove('hidden');
+    return;
+  }
+
+  queryPending = true;
+  input.disabled = true;
+  answerEl.innerHTML = '<span class="text-on-surface-variant italic">Analyzing with Claude…</span>';
+  chartWrap.classList.add('hidden');
+  resultWrap.classList.remove('hidden');
+
+  try {
+    const cf = getCompanyFilters();
+    const response = await fetch('/api/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: q,
+        context: dashData,
+        filters: {
+          date_range: selectedDateRange,
+          date_from: getDateRangeBounds().start.toISOString(),
+          vendor: lastLoadedVendor?.name,
+          products: lastLoadedProductIds,
+          industry: cf.industry || null,
+          country: cf.country || null,
+          employees: cf.employees || null,
+        },
+      }),
+    });
+    const json = await response.json();
+    if (!json.ok) throw new Error(json.error || 'Query failed');
+
+    if (json.action) applyAction(json.action);
+
+    answerEl.innerHTML = `<div class="space-y-1">
+      <p>${json.answer}</p>
+      ${json.action ? `<p class="text-xs text-g2-purple italic">Dashboard view updated.</p>` : ''}
+    </div>`;
+
+    // Render chart if Claude returned one
+    if (json.chart) {
+      renderQueryChart(json.chart);
+    } else {
+      chartWrap.classList.add('hidden');
+    }
+  } catch (err) {
+    answerEl.textContent = localQuery(q);
+    chartWrap.classList.add('hidden');
+  } finally {
+    queryPending = false;
+    input.disabled = false;
+    input.value = '';
+  }
+}
+
+function renderQueryChart(spec) {
+  const chartWrap = document.getElementById('query-chart-wrap');
+  const canvas    = document.getElementById('query-chart');
+
+  // Destroy existing chart instance
+  if (_activeChart) {
+    _activeChart.destroy();
+    _activeChart = null;
+  }
+
+  chartWrap.classList.remove('hidden');
+
+  const ctx = canvas.getContext('2d');
+  _activeChart = new Chart(ctx, {
+    type: spec.type || 'bar',
+    data: {
+      labels: spec.labels || [],
+      datasets: (spec.datasets || []).map(ds => ({
+        label: ds.label || '',
+        data: ds.data || [],
+        backgroundColor: ds.backgroundColor || '#FF492C',
+        borderColor: ds.borderColor || ds.backgroundColor || '#FF492C',
+        borderWidth: spec.type === 'line' ? 2 : 1,
+        fill: spec.type === 'line' ? false : undefined,
+        tension: 0.3,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: (spec.datasets || []).length > 1 || spec.type === 'pie' || spec.type === 'doughnut' },
+        title: { display: !!spec.title, text: spec.title || '', font: { size: 13 } },
+      },
+      scales: (spec.type === 'pie' || spec.type === 'doughnut') ? {} : {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+      },
+    },
+  });
+}
+
+function applyAction(action) {
+  if (action.tab) showTab(action.tab);
+  if (action.filter) {
+    if (action.filter.subscription) setSubFilter(action.filter.subscription);
+  }
+}
+
+function localQuery(q) {
+  const ql = q.toLowerCase();
+
+  // Detect vendor search patterns: "show me IBM", "search Salesforce", "look up Oracle"
+  const vendorMatch = q.match(/(?:show\s+(?:me\s+)?|search\s+(?:for\s+)?|look\s*up\s+|find\s+|switch\s+to\s+|load\s+)([A-Z][A-Za-z0-9\s.&]+)/i);
+  if (vendorMatch) {
+    const vendorName = vendorMatch[1].trim();
+    searchVendor(vendorName);
+    return `Searching for ${vendorName}…`;
+  }
+
+  if (ql.includes('subscri') || ql.includes('coverage') || ql.includes('expansion')) {
+    showTab('subscriptions');
+    const sub = dashData.subscription;
+    if (sub) {
+      return `${sub.summary.products_with_intent} of ${sub.summary.total_products} products have intent. ` +
+        `${sub.summary.total_subscribed_categories} of ${sub.summary.total_categories} categories subscribed.`;
+    }
+  }
+  if (ql.includes('top') || ql.includes('highest') || ql.includes('company') || ql.includes('companies')) {
+    showTab('companies');
+    const top3 = (dashData.top_companies || []).slice(0, 3);
+    return `Top 3 intent companies: ${top3.map(c => `${c.name} (score: ${c.score})`).join(', ')}.`;
+  }
+  if (ql.includes('competitor') || ql.includes('evaluating')) {
+    const top3 = (dashData.competitors || []).slice(0, 3);
+    return `Top competitors: ${top3.map(c => `${c.name} (${fmt(c.companies)} co.)`).join(', ')}.`;
+  }
+  if (ql.includes('region') || ql.includes('where') || ql.includes('country')) {
+    showTab('regions');
+    const r = dashData.regional || {};
+    return Object.entries(r).filter(([k])=>k!=='Other').sort((a,b)=>b[1].pct-a[1].pct)
+      .map(([k,v]) => `${k}: ${v.pct}%`).join(' · ');
+  }
+  if (ql.includes('funnel') || ql.includes('awareness') || ql.includes('decision')) {
+    showTab('funnel');
+    const f = dashData.funnel;
+    return `Funnel — Awareness: ${fmt(f.awareness)}, Consideration: ${fmt(f.consideration)}, Decision: ${fmt(f.decision)} companies.`;
+  }
+  return `Intent score: ${dashData.active_intent_score}%. ${fmt((dashData.top_companies||[]).length)} tracked companies. Try "show me IBM", "top companies", "competitors", "regions", or "funnel".`;
+}
+
+// -------------------------------------------------------
+// Boot
+// -------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+  updateDateRangeLabel();
+  loadDashboard();
+});
+</script>
+</body>
+</html>

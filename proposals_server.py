@@ -96,6 +96,9 @@ def _init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_pv_pid ON proposal_versions(proposal_id)")
         c.execute("""CREATE TABLE IF NOT EXISTS rate_cards (
             id TEXT PRIMARY KEY,
+            name TEXT NOT NULL DEFAULT 'Untitled Rate Card',
+            customer TEXT DEFAULT '',
+            owner TEXT DEFAULT '',
             card_data TEXT NOT NULL DEFAULT '{}',
             updated_at TEXT DEFAULT (datetime('now'))
         )""")
@@ -268,11 +271,103 @@ def get_version(vid):
         return jsonify({"ok": True, "data": d})
 
 
-# ── Rate Card API ───────────────────────────────────────────────────
+# ── Rate Card API (multiple named cards per customer) ───────────────
 
+@app.route("/api/ratecards", methods=["GET"])
+def list_ratecards():
+    """List all rate cards."""
+    if USE_SUPABASE:
+        rows = _supa_get("rate_cards", "select=id,name,customer,owner,updated_at&order=updated_at.desc")
+        return jsonify({"ok": True, "data": rows})
+    else:
+        with _db() as c:
+            rows = c.execute("SELECT id,name,customer,owner,updated_at FROM rate_cards ORDER BY updated_at DESC").fetchall()
+        return jsonify({"ok": True, "data": [dict(r) for r in rows]})
+
+
+@app.route("/api/ratecards", methods=["POST"])
+def create_ratecard():
+    """Create a new rate card."""
+    body = request.get_json(force=True)
+    rid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    card_data = body.get("card_data", {})
+
+    if USE_SUPABASE:
+        row = _supa_post("rate_cards", {
+            "id": rid,
+            "name": body.get("name", "Untitled Rate Card"),
+            "customer": body.get("customer", ""),
+            "owner": body.get("owner", ""),
+            "card_data": card_data,
+            "updated_at": now,
+        })
+        return jsonify({"ok": True, "data": row})
+    else:
+        with _db() as c:
+            c.execute("INSERT INTO rate_cards(id,name,customer,owner,card_data) VALUES(?,?,?,?,?)",
+                      (rid, body.get("name","Untitled"), body.get("customer",""),
+                       body.get("owner",""), json.dumps(card_data)))
+            row = c.execute("SELECT * FROM rate_cards WHERE id=?", (rid,)).fetchone()
+        d = dict(row)
+        try: d["card_data"] = json.loads(d["card_data"])
+        except: pass
+        return jsonify({"ok": True, "data": d})
+
+
+@app.route("/api/ratecards/<rid>", methods=["GET"])
+def get_ratecard(rid):
+    """Get a specific rate card by ID."""
+    if USE_SUPABASE:
+        rows = _supa_get("rate_cards", f"id=eq.{rid}")
+        if not rows:
+            return jsonify({"ok": False, "error": "Not found"}), 404
+        d = rows[0]
+        if isinstance(d.get("card_data"), str):
+            try: d["card_data"] = json.loads(d["card_data"])
+            except: pass
+        return jsonify({"ok": True, "data": d})
+    else:
+        with _db() as c:
+            row = c.execute("SELECT * FROM rate_cards WHERE id=?", (rid,)).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "Not found"}), 404
+        d = dict(row)
+        try: d["card_data"] = json.loads(d["card_data"])
+        except: pass
+        return jsonify({"ok": True, "data": d})
+
+
+@app.route("/api/ratecards/<rid>", methods=["PUT"])
+def update_ratecard(rid):
+    """Update an existing rate card."""
+    body = request.get_json(force=True)
+    now = datetime.now(timezone.utc).isoformat()
+
+    if USE_SUPABASE:
+        row = _supa_patch("rate_cards", f"id=eq.{rid}", {
+            "name": body.get("name"),
+            "customer": body.get("customer"),
+            "owner": body.get("owner"),
+            "card_data": body.get("card_data", {}),
+            "updated_at": now,
+        })
+        return jsonify({"ok": True, "data": row})
+    else:
+        with _db() as c:
+            c.execute("UPDATE rate_cards SET name=?,customer=?,owner=?,card_data=?,updated_at=datetime('now') WHERE id=?",
+                      (body.get("name"), body.get("customer"), body.get("owner"),
+                       json.dumps(body.get("card_data",{})), rid))
+            row = c.execute("SELECT * FROM rate_cards WHERE id=?", (rid,)).fetchone()
+        d = dict(row)
+        try: d["card_data"] = json.loads(d["card_data"])
+        except: pass
+        return jsonify({"ok": True, "data": d})
+
+
+# Backward-compat: old single-card endpoint redirects to list
 @app.route("/api/ratecard", methods=["GET"])
-def get_ratecard():
-    """Get the shared rate card (one per team)."""
+def get_ratecard_compat():
     if USE_SUPABASE:
         rows = _supa_get("rate_cards", "select=*&order=updated_at.desc&limit=1")
         if rows:
@@ -281,51 +376,15 @@ def get_ratecard():
                 try: d["card_data"] = json.loads(d["card_data"])
                 except: pass
             return jsonify({"ok": True, "data": d})
-        return jsonify({"ok": True, "data": None})
     else:
         with _db() as c:
             row = c.execute("SELECT * FROM rate_cards ORDER BY updated_at DESC LIMIT 1").fetchone()
-        if not row:
-            return jsonify({"ok": True, "data": None})
-        d = dict(row)
-        try: d["card_data"] = json.loads(d["card_data"])
-        except: pass
-        return jsonify({"ok": True, "data": d})
-
-
-@app.route("/api/ratecard", methods=["POST"])
-def save_ratecard():
-    """Save/update the shared rate card."""
-    body = request.get_json(force=True)
-    card_data = body.get("card_data", {})
-    now = datetime.now(timezone.utc).isoformat()
-
-    if USE_SUPABASE:
-        # Upsert: check if one exists
-        existing = _supa_get("rate_cards", "select=id&limit=1")
-        if existing:
-            row = _supa_patch("rate_cards", f"id=eq.{existing[0]['id']}", {
-                "card_data": card_data,
-                "updated_at": now,
-            })
-        else:
-            row = _supa_post("rate_cards", {
-                "id": str(uuid.uuid4()),
-                "card_data": card_data,
-                "updated_at": now,
-            })
-        return jsonify({"ok": True, "data": row})
-    else:
-        with _db() as c:
-            existing = c.execute("SELECT id FROM rate_cards LIMIT 1").fetchone()
-            if existing:
-                c.execute("UPDATE rate_cards SET card_data=?, updated_at=datetime('now') WHERE id=?",
-                          (json.dumps(card_data), existing["id"]))
-            else:
-                rid = str(uuid.uuid4())
-                c.execute("INSERT INTO rate_cards(id, card_data) VALUES(?,?)",
-                          (rid, json.dumps(card_data)))
-        return jsonify({"ok": True})
+        if row:
+            d = dict(row)
+            try: d["card_data"] = json.loads(d["card_data"])
+            except: pass
+            return jsonify({"ok": True, "data": d})
+    return jsonify({"ok": True, "data": None})
 
 
 # ── PPTX Export ─────────────────────────────────────────────────────
