@@ -1927,10 +1927,13 @@ function RateCardMode({initialRateCard,onDone}){
       const body={name:rcName||"Untitled Rate Card",customer:rcCustomer,owner:rcOwner,card_data:card};
       if(editingId==="new"){
         const r=await fetch("/api/ratecards",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        if(!r.ok){const err=await r.text();throw new Error("Server error "+r.status+": "+err);}
         const d=await r.json();
+        if(!d.ok||!d.data){throw new Error(d.error||"Failed to create rate card — check if the rate_cards table exists in Supabase");}
         setEditingId(d.data.id);
       }else{
-        await fetch("/api/ratecards/"+editingId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        const r=await fetch("/api/ratecards/"+editingId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        if(!r.ok){const err=await r.text();throw new Error("Server error "+r.status+": "+err);}
       }
       setSavedMsg(true);setTimeout(()=>setSavedMsg(false),3000);
       loadList();
