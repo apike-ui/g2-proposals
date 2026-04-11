@@ -1079,7 +1079,7 @@ function BuilderMode({pendingLoad, onLoaded}){
             </div>
             {(totalList>totalAcv||propDiscAmt>0)&&<div style={{background:"#E0FAF6",border:`1px solid ${C.green}`,borderRadius:6,padding:"8px 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:13,color:C.green}}>&#10003;</span>
+                <span style={{fontSize:13,color:C.green}}>{"\u2713"}</span>
                 <span style={{fontSize:12,fontWeight:700,color:"#1a6b5e"}}>Customer Savings</span>
               </div>
               <div style={{textAlign:"right"}}>
@@ -1093,37 +1093,33 @@ function BuilderMode({pendingLoad, onLoaded}){
             {propDiscAmt>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.green,fontWeight:600,padding:"4px 0"}}>
               <span>Proposal Discount ({propDiscPct}%)</span><span>-{fmt(propDiscAmt)}</span>
             </div>}
-            {/* SKU Summary Table */}
+            {/* SKU Summary Table (div-based) */}
             <div style={{marginTop:8}}>
               <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>SKU Summary by Profile</div>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                <thead><tr style={{background:C.navy}}>
-                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600,borderRadius:"4px 0 0 0"}}>Profile</th>
-                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600}}>Base Package</th>
-                  <th style={{textAlign:"left",padding:"6px 10px",color:"#fff",fontWeight:600}}>Add-Ons</th>
-                  <th style={{textAlign:"right",padding:"6px 10px",color:"#fff",fontWeight:600,borderRadius:"0 4px 0 0"}}>ACV</th>
-                </tr></thead>
-                <tbody>
-                  {prodSummaries.map((ps,i)=><tr key={i} style={{background:i%2===0?"#fff":C.light,borderBottom:"1px solid #E2E8F0"}}>
-                    <td style={{padding:"7px 10px",fontWeight:700,color:C.navy,whiteSpace:"nowrap"}}>{ps.name}</td>
-                    <td style={{padding:"7px 10px",color:C.navy}}>
-                      {ps.basePkg?<span className="pill" style={{background:ps.basePkg.color,fontSize:10}}>{ps.basePkg.name}</span>:<span style={{color:C.mid}}>—</span>}
-                    </td>
-                    <td style={{padding:"7px 10px",color:C.mid}}>
-                      {ps.addonLines.length>0
-                        ?<div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                          {ps.addonLines.map((a,j)=><span key={j} style={{background:a.color+"18",color:a.color,fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:10,whiteSpace:"nowrap"}}>{a.name}{a.qty>1?` x${a.qty}`:""}</span>)}
-                        </div>
-                        :<span style={{fontSize:11,color:C.mid}}>None</span>}
-                    </td>
-                    <td style={{padding:"7px 10px",textAlign:"right",fontWeight:700,color:C.navy,whiteSpace:"nowrap"}}>{fmt(ps.prodAcv)}</td>
-                  </tr>)}
-                  {nonAcvLines.length>0&&<tr style={{background:prodSummaries.length%2===0?"#fff":C.light,borderTop:"2px solid #E2E8F0"}}>
-                    <td style={{padding:"7px 10px",fontWeight:600,color:C.mid}} colSpan={3}>Non-ACV Items: {nonAcvLines.map(l=>l.name+(l.qty>1?` x${l.qty}`:"")).join(", ")}</td>
-                    <td style={{padding:"7px 10px",textAlign:"right",fontWeight:700,color:C.navy}}>{fmt(totalNonAcv)}</td>
-                  </tr>}
-                </tbody>
-              </table>
+              <div style={{borderRadius:6,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+                <div style={{display:"grid",gridTemplateColumns:"2.5fr 1.5fr 4fr 1.5fr",background:C.navy,padding:"6px 0"}}>
+                  <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11}}>Profile</div>
+                  <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11}}>Package</div>
+                  <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11}}>Add-Ons</div>
+                  <div style={{padding:"0 10px",color:"#fff",fontWeight:600,fontSize:11,textAlign:"right"}}>ACV</div>
+                </div>
+                {prodSummaries.map((ps,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"2.5fr 1.5fr 4fr 1.5fr",padding:"7px 0",background:i%2===0?"#fff":C.light,borderTop:"1px solid #E2E8F0"}}>
+                  <div style={{padding:"0 10px",fontWeight:700,fontSize:12,color:C.navy,whiteSpace:"nowrap"}}>{ps.name}</div>
+                  <div style={{padding:"0 10px",fontSize:12,color:C.navy}}>
+                    {ps.basePkg?<span className="pill" style={{background:ps.basePkg.color,fontSize:10}}>{ps.basePkg.name}</span>:<span style={{color:C.mid}}>-</span>}
+                  </div>
+                  <div style={{padding:"0 10px",display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                    {ps.addonLines.length>0
+                      ?ps.addonLines.map((a,j)=><span key={j} style={{background:(a.color||C.mid)+"18",color:a.color||C.mid,fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:10,whiteSpace:"nowrap"}}>{a.name}{a.qty>1?" x"+a.qty:""}</span>)
+                      :<span style={{fontSize:11,color:C.mid}}>None</span>}
+                  </div>
+                  <div style={{padding:"0 10px",textAlign:"right",fontWeight:700,fontSize:12,color:C.navy}}>{fmt(ps.prodAcv)}</div>
+                </div>)}
+                {nonAcvLines.length>0&&<div style={{display:"grid",gridTemplateColumns:"8fr 1.5fr",padding:"7px 0",borderTop:"2px solid #E2E8F0",background:C.light}}>
+                  <div style={{padding:"0 10px",fontWeight:600,fontSize:11,color:C.mid}}>Non-ACV: {nonAcvLines.map(function(l){return l.name+(l.qty>1?" x"+l.qty:"")}).join(", ")}</div>
+                  <div style={{padding:"0 10px",textAlign:"right",fontWeight:700,fontSize:12,color:C.navy}}>{fmt(totalNonAcv)}</div>
+                </div>}
+              </div>
             </div>
           </div>
           {prodSummaries.map((ps,idx)=>{const color=ps.basePkg?ps.basePkg.color:C.mid;
