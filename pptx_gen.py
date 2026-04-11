@@ -608,6 +608,13 @@ def slide_pricing_table(prs, data, totals, page_num):
 
         row_y += row_h
 
+    # Overflow indicator
+    if len(line_items) > max_rows:
+        _text(slide, margin_x, row_y + 0.02, table_w, 0.25,
+              f"+ {len(line_items) - max_rows} more item(s) — see product detail slides",
+              size=9, color=MID_TEXT, align=PP_ALIGN.CENTER)
+        row_y += 0.28
+
     # Totals
     total_y = max(row_y + 0.2, 5.4)
 
@@ -636,6 +643,87 @@ def slide_pricing_table(prs, data, totals, page_num):
                   size=10, color=MID_TEXT, align=PP_ALIGN.RIGHT)
 
     _footer(slide, page_num=page_num)
+
+
+# ── Cost by Year slide ──────────────────────────────────────────────
+
+def slide_cost_by_year(prs, data, totals, page_num):
+    """Only generated for multi-year terms (>12 months)."""
+    contract_term = data.get("contractTerm") or "12"
+    try:
+        term_months = int(contract_term)
+    except (ValueError, TypeError):
+        term_months = 12
+    if term_months <= 12:
+        return False  # don't generate slide
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _rect(slide, 0, 0, 13.333, 7.5, WHITE)
+
+    # Header
+    _rect(slide, 0, 0, 13.333, 1.25, NAVY)
+    _rect(slide, 0, 0, 0.08, 1.25, RORANGE)
+    _logo(slide, 12.1, 0.28, 0.55, variant="white")
+    _text(slide, 0.7, 0.15, 8, 0.55, "Cost by Year",
+          size=28, bold=True, color=WHITE)
+    cust = data.get("cust") or data.get("customer") or ""
+    _text(slide, 0.7, 0.72, 8, 0.35, cust, size=13, color=BORDER_GREY)
+    _accent_bar(slide, 0, 1.25, 13.333, 0.05)
+
+    annual_total = totals["total_net"]
+    years = (term_months + 11) // 12  # ceil
+
+    # Table layout
+    mx = 0.7
+    tw = 11.9
+    cols = "year acv annual cumulative".split()
+
+    # Table header
+    th_y = 1.6
+    _rect(slide, mx, th_y, tw, 0.48, NAVY)
+    col_w = tw / 4
+    headers = ["Year", "Annual ACV", "Annual Total", "Cumulative"]
+    for i, h in enumerate(headers):
+        align = PP_ALIGN.LEFT if i == 0 else PP_ALIGN.RIGHT
+        _text(slide, mx + i * col_w + 0.15, th_y + 0.08, col_w - 0.3, 0.3,
+              h, size=11, bold=True, color=WHITE, align=align)
+
+    # Rows
+    ry = th_y + 0.48
+    row_h = 0.48
+    cumulative = 0
+
+    for y in range(1, years + 1):
+        is_partial = (y == years and term_months % 12 != 0)
+        fraction = (term_months % 12) / 12.0 if is_partial else 1.0
+        yr_total = round(annual_total * fraction)
+        cumulative += yr_total
+
+        bg = LIGHT_BG if y % 2 == 1 else WHITE
+        _rect(slide, mx, ry, tw, row_h, bg)
+
+        yr_label = f"Year {y}" + (f" ({term_months % 12}mo)" if is_partial else "")
+        _text(slide, mx + 0.15, ry + 0.1, col_w - 0.3, 0.28,
+              yr_label, size=12, bold=True, color=NAVY)
+        _text(slide, mx + col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
+              fmt_money(yr_total), size=12, color=NAVY, align=PP_ALIGN.RIGHT)
+        _text(slide, mx + 2 * col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
+              fmt_money(yr_total), size=12, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
+        _text(slide, mx + 3 * col_w + 0.15, ry + 0.1, col_w - 0.3, 0.28,
+              fmt_money(cumulative), size=12, color=NAVY, align=PP_ALIGN.RIGHT)
+
+        ry += row_h
+
+    # Total row
+    _rect(slide, mx, ry + 0.1, tw, 0.55, NAVY)
+    _text(slide, mx + 0.15, ry + 0.18, col_w * 2.5, 0.35,
+          f"Total Contract Value ({years} year{'s' if years > 1 else ''})",
+          size=14, bold=True, color=WHITE)
+    _text(slide, mx + 2 * col_w + 0.15, ry + 0.18, col_w - 0.3, 0.35,
+          fmt_money(cumulative), size=16, bold=True, color=RORANGE, align=PP_ALIGN.RIGHT)
+
+    _footer(slide, page_num=page_num)
+    return True
 
 
 # ── Next Steps slide ────────────────────────────────────────────────
@@ -762,6 +850,10 @@ def build_pptx(data: dict) -> bytes:
     # Pricing table
     slide_pricing_table(prs, data, totals, page_num=page)
     page += 1
+
+    # Cost by Year (only for multi-year terms)
+    if slide_cost_by_year(prs, data, totals, page_num=page):
+        page += 1
 
     # Next steps
     slide_next_steps(prs, data, page_num=page)

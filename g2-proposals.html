@@ -80,7 +80,18 @@ td:last-child{font-weight:700;text-align:right}
 /* Badge */
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#E2E8F0;color:#4D6480}
 .badge-new{background:#E0FAF6;color:#1a9e8c}
-@media print{body{background:#fff}.no-print{display:none!important}.card{box-shadow:none;border:1px solid #E2E8F0}}
+@media print{
+  @page{size:letter;margin:0.5in 0.4in}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{display:none!important}
+  .ctr{max-width:100%!important;padding:0!important}
+  .card{box-shadow:none;border:none;max-width:100%!important;padding:24px 20px!important;page-break-inside:auto}
+  .sline{page-break-inside:avoid}
+  div[style*="borderTop:3px"]{page-break-before:avoid}
+  div[style*="marginBottom:28"]{page-break-inside:avoid}
+  div[style*="borderRadius:6"]{page-break-inside:avoid}
+  table,div[style*="gridTemplateColumns"]{page-break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -1085,7 +1096,7 @@ function BuilderMode({pendingLoad, onLoaded}){
             <p style={{fontSize:12,color:"#7D8FA6",borderTop:"1px solid #E2E8F0",paddingTop:12}}>Once set, clicking this button opens a Google sign-in popup, then creates a Google Slides file in your Drive.</p>
           </div>
         </div>}
-        <div className="card" style={{padding:"40px 48px",maxWidth:860,margin:"0 auto"}}>
+        <div className="card" style={{padding:"36px 40px",maxWidth:780,margin:"0 auto"}}>
           <div style={{borderTop:`4px solid ${C.rorange}`,paddingTop:24,marginBottom:32}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div>
