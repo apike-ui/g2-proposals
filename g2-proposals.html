@@ -239,18 +239,26 @@ const BASE_PKGS=[
   {id:"enterprise",name:"Enterprise",list:34000,color:C.rorange,hl:"Full platform + intelligence"},
 ];
 
+/* catPricing: true = price is per-category with volume breaks + "All Categories" flat rate.
+   catVolume: [{minCats, perCatPrice}] — sorted ascending. allCatPrice = flat price for all.
+   The tier selection picks the signal/scope tier; categories is a separate dimension. */
 const ADDON_CATALOG=[
-  {id:"intent",name:"Buyer Intent",color:C.blue,tint:C.blueTint,tiers:[
+  {id:"intent",name:"Buyer Intent",color:C.blue,tint:C.blueTint,catPricing:true,
+    allCatPrice:75000,
+    catVolume:[{minCats:1,perCatPrice:12500},{minCats:3,perCatPrice:11000},{minCats:5,perCatPrice:9500},{minCats:10,perCatPrice:8000}],
+    tiers:[
     {l:"Tier 1: 0-5K signals",p:12500},{l:"Tier 2: 5K-10K signals",p:17000},{l:"Tier 3: 10K-15K signals",p:25000},
     {l:"Tier 4: 15K-20K signals",p:32500},{l:"Tier 5: 20K-25K signals",p:40000},{l:"Tier 6: 25K-30K signals",p:47500},
     {l:"Tier 7: 30K-45K signals",p:57000},{l:"Tier 8: 45K-60K signals",p:65000},{l:"Tier 9: 60K-100K signals",p:70500},
     {l:"Tier 10: 100K+ signals",p:75000}]},
-  {id:"content",name:"G2 Content",color:C.purple,tint:C.purpleTint,tiers:[
-    {l:"Cat & Comparison (1 cat)",p:45000},{l:"Cat & Comparison (all cats)",p:80000},
-    {l:"Momentum & Index (1 cat)",p:13000},{l:"Momentum & Index (all cats)",p:25000},
-    {l:"Regional Grid (1 cat/region)",p:20000},{l:"Grid Report (individual)",p:25000},
-    {l:"Comparison Report (individual)",p:18000},{l:"Segmented Grid (individual)",p:25000},
-    {l:"Index Report (individual)",p:7000}]},
+  {id:"content",name:"G2 Content",color:C.purple,tint:C.purpleTint,catPricing:true,
+    allCatPrice:80000,
+    catVolume:[{minCats:1,perCatPrice:25000},{minCats:3,perCatPrice:22000},{minCats:5,perCatPrice:18000}],
+    tiers:[
+    {l:"Cat & Comparison",p:45000},{l:"Momentum & Index",p:13000},
+    {l:"Regional Grid",p:20000},{l:"Grid Report",p:25000},
+    {l:"Comparison Report",p:18000},{l:"Segmented Grid",p:25000},
+    {l:"Index Report",p:7000}]},
   {id:"aicr",name:"AI-Led Custom Research (AICR)",color:C.green,tint:C.greenTint,tiers:[
     {l:"SMART Report (reviews-based)",p:5000},{l:"AI Research (~100 interviews)",p:10000},
     {l:"AI Research (200-300 interviews)",p:85000},{l:"Post-Pilot (100 interviews)",p:25000}]},
@@ -705,7 +713,7 @@ function BuilderMode({pendingLoad, onLoaded}){
   const addProduct=()=>{setProducts(prev=>{const n=[...prev,mkProduct("")];setActiveIdx(n.length-1);return n;});};
   const removeProduct=idx=>{setProducts(prev=>{if(prev.length<=1)return prev;const n=prev.filter((_,i)=>i!==idx);setActiveIdx(Math.min(activeIdx,n.length-1));return n;});};
   const updateProd=(idx,fn)=>{setProducts(prev=>prev.map((p,i)=>i===idx?fn(p):p));};
-  const toggleAddon=(pIdx,addonId,on)=>{updateProd(pIdx,p=>{const addons={...p.addons};if(on){addons[addonId]={on:true,tierIdx:0,qty:1,rate:"",disc:""};}else{delete addons[addonId];}return{...p,addons};});};
+  const toggleAddon=(pIdx,addonId,on)=>{updateProd(pIdx,p=>{const addons={...p.addons};if(on){addons[addonId]={on:true,tierIdx:0,qty:1,rate:"",disc:"",cats:"",allCats:false};}else{delete addons[addonId];}return{...p,addons};});};
   const updateAddon=(pIdx,addonId,patch)=>{updateProd(pIdx,p=>({...p,addons:{...p.addons,[addonId]:{...p.addons[addonId],...patch}}}));};
 
   /* Account item helpers */
@@ -746,11 +754,31 @@ function BuilderMode({pendingLoad, onLoaded}){
             rcRate=Math.round(baseForDisc*(1-applicable[0].discPct/100));
           }
         }
-        const rate=pn(d.rate)||(rcRate!=null?rcRate:listRate);const qty=d.qty||1;
-        const total=rate*qty;const listTotal=listRate*qty;
-        const disc=listRate>0?Math.round((1-rate/listRate)*1000)/10:0;
+        /* Category-based pricing */
+        let rate,qty,total,listTotal,tierLabel=tier.l;
+        if(cat.catPricing){
+          qty=1; /* qty not used for cat pricing */
+          if(d.allCats){
+            const allPrice=cat.allCatPrice||75000;
+            rate=pn(d.rate)||allPrice;
+            listTotal=allPrice;
+            tierLabel=tier.l+" (All Categories)";
+          }else{
+            const cats=parseInt(d.cats)||1;
+            const matched=(cat.catVolume||[]).filter(v=>cats>=v.minCats).sort((a,b)=>b.minCats-a.minCats);
+            const perCat=matched.length>0?matched[0].perCatPrice:listRate;
+            rate=pn(d.rate)||(perCat*cats);
+            listTotal=listRate*cats;
+            tierLabel=tier.l+" ("+cats+" cat"+(cats>1?"s":"")+")";
+          }
+          total=rate;
+        }else{
+          rate=pn(d.rate)||(rcRate!=null?rcRate:listRate);qty=d.qty||1;
+          total=rate*qty;listTotal=listRate*qty;
+        }
+        const disc=listTotal>0?Math.round((1-total/listTotal)*1000)/10:0;
         prodAcv+=total;prodList+=listTotal;
-        addonLines.push({name:cat.name,tier:tier.l,qty,rate,total,listRate,listTotal,disc,color:cat.color});
+        addonLines.push({name:cat.name,tier:tierLabel,qty,rate,total,listRate,listTotal,disc,color:cat.color});
       });
       return{name:prod.name||"Unnamed Product",basePkg,baseRate,baseDisc,listBase,addonLines,prodAcv,prodList};
     });
@@ -1015,7 +1043,19 @@ function BuilderMode({pendingLoad, onLoaded}){
                   <div style={{width:8,height:8,borderRadius:"50%",background:addon.color}}/>
                   <span style={{fontWeight:700,fontSize:13,color:C.navy}}>{addon.name}</span>
                 </div>
-                {on&&(()=>{const tier=addon.tiers[data.tierIdx||0];const rate=pn(data.rate)||tier.p;const qty=tier.custom?1:(data.qty||1);return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{rate>0?fmt(rate*qty):"Custom"}</span>;})()}
+                {on&&(()=>{
+                  const tier=addon.tiers[data.tierIdx||0];
+                  if(addon.catPricing){
+                    if(data.allCats){return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{fmt(pn(data.rate)||addon.allCatPrice)}</span>;}
+                    const cats=parseInt(data.cats)||1;
+                    const matched=(addon.catVolume||[]).filter(v=>cats>=v.minCats).sort((a,b)=>b.minCats-a.minCats);
+                    const perCat=matched.length>0?matched[0].perCatPrice:tier.p;
+                    const total=pn(data.rate)||(perCat*cats);
+                    return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{total>0?fmt(total):"Custom"}<span style={{fontSize:11,color:C.mid,fontWeight:400}}> ({cats} cat{cats>1?"s":""})</span></span>;
+                  }
+                  const rate=pn(data.rate)||tier.p;const qty=tier.custom?1:(data.qty||1);
+                  return <span style={{fontWeight:700,fontSize:14,color:C.navy}}>{rate>0?fmt(rate*qty):"Custom"}</span>;
+                })()}
               </div>
               {on&&(()=>{const selTier=addon.tiers[data.tierIdx||0];const isCustomTier=!!selTier.custom;const noDisc=!!addon.noDisc;
                 return <div style={{padding:"6px 20px 6px 64px",background:addon.tint||"#F8FAFC",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
@@ -1023,6 +1063,26 @@ function BuilderMode({pendingLoad, onLoaded}){
                   <select value={data.tierIdx||0} onChange={e=>updateAddon(activeIdx,addon.id,{tierIdx:parseInt(e.target.value),rate:"",disc:""})} className="inp" style={{minWidth:200,fontSize:12}}>
                     {addon.tiers.map((t,i)=><option key={i} value={i}>{t.l}{t.p>0?" - "+fmt(t.p):""}</option>)}
                   </select></div>
+                {addon.catPricing&&<React.Fragment>
+                  <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>CATEGORIES</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      {!data.allCats?<input type="number" className="inp" min="1" style={{width:55,textAlign:"center",fontSize:12}}
+                        value={data.cats||""} placeholder="1"
+                        onChange={e=>updateAddon(activeIdx,addon.id,{cats:e.target.value,rate:""})}/>:
+                        <span style={{fontSize:12,fontWeight:600,color:C.blue,padding:"4px 8px",background:C.blueTint,borderRadius:4}}>All</span>}
+                      <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:C.mid,cursor:"pointer",whiteSpace:"nowrap"}}>
+                        <input type="checkbox" checked={!!data.allCats} onChange={e=>updateAddon(activeIdx,addon.id,{allCats:e.target.checked,cats:"",rate:""})}/>
+                        All Categories
+                      </label>
+                    </div>
+                    {!data.allCats&&addon.catVolume&&(()=>{
+                      const c=parseInt(data.cats)||1;
+                      const matched=addon.catVolume.filter(v=>c>=v.minCats).sort((a,b)=>b.minCats-a.minCats);
+                      if(matched.length>0)return <div style={{fontSize:10,color:C.blue,marginTop:2}}>{fmt(matched[0].perCatPrice)}/cat</div>;
+                      return null;
+                    })()}
+                  </div>
+                </React.Fragment>}
                 {isCustomTier?<React.Fragment>
                   <div style={{flex:1,minWidth:180}}><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>DESCRIPTION</div>
                     <input type="text" className="inp" style={{width:"100%",fontSize:12}} placeholder="Describe custom scope..."
@@ -1031,8 +1091,8 @@ function BuilderMode({pendingLoad, onLoaded}){
                     <input type="number" className="inp inp-r" style={{width:120}} placeholder="0"
                       value={data.rate||""} onChange={e=>updateAddon(activeIdx,addon.id,{rate:e.target.value})}/></div>
                 </React.Fragment>:<React.Fragment>
-                <div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>QTY</div>
-                  <input type="number" className="inp inp-qty" min="1" value={data.qty||1} onChange={e=>updateAddon(activeIdx,addon.id,{qty:Math.max(1,parseInt(e.target.value)||1)})}/></div>
+                {!addon.catPricing&&<div><div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>QTY</div>
+                  <input type="number" className="inp inp-qty" min="1" value={data.qty||1} onChange={e=>updateAddon(activeIdx,addon.id,{qty:Math.max(1,parseInt(e.target.value)||1)})}/></div>}
                 <div style={{display:"flex",gap:6,alignItems:"flex-end"}}>
                   {!noDisc&&(discOpen[addon.id]||pn(data.disc)>0)&&<div style={{textAlign:"center"}}>
                     <div style={{fontSize:10,fontWeight:600,color:C.mid,marginBottom:3}}>DISC %</div>
@@ -1674,6 +1734,29 @@ function RateCardMode(){
                 {disc===0&&<div/>}
               </div>;
             })}
+
+            {/* Category Volume Pricing (for catPricing SKUs) */}
+            {addon.catPricing&&<div style={{marginTop:16,paddingTop:12,borderTop:"2px solid #E2E8F0"}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.mid,textTransform:"uppercase",marginBottom:8}}>Category Volume Pricing</div>
+              <div style={{display:"flex",alignItems:"center",gap:16,padding:"8px 0",borderBottom:"1px solid #E2E8F0"}}>
+                <span style={{fontSize:12,fontWeight:700,color:C.navy,minWidth:120}}>All Categories</span>
+                <div>
+                  <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>LIST</div>
+                  <div style={{fontSize:12,color:C.mid}}>{fmt(addon.allCatPrice)}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}>MY RATE</div>
+                  <input type="number" className="inp" style={{width:100,textAlign:"right",fontSize:12,padding:"4px 6px"}}
+                    value={myAddon.allCatMyPrice||""} placeholder={addon.allCatPrice}
+                    onChange={e=>{setCard(prev=>{const a={...prev.addons};a[addon.id]={...a[addon.id],allCatMyPrice:pn(e.target.value)};return{...prev,addons:a};});}}/>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:C.mid,marginTop:6,marginBottom:4}}>Per-category price by volume:</div>
+              {(addon.catVolume||[]).map((cv,ci)=><div key={ci} style={{display:"flex",alignItems:"center",gap:10,padding:"4px 0",fontSize:12}}>
+                <span style={{color:C.navy,minWidth:100}}>{cv.minCats}+ categories:</span>
+                <span style={{color:C.mid}}>{fmt(cv.perCatPrice)}/cat (list)</span>
+              </div>)}
+            </div>}
 
             {/* Volume Discounts */}
             <div style={{marginTop:16,paddingTop:12,borderTop:"2px solid #E2E8F0"}}>
