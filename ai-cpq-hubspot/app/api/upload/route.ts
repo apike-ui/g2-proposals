@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   // Returns the template file
   const buffer = generateExcelTemplate()
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer.buffer as ArrayBuffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="cpq-product-template.xlsx"',

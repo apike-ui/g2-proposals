@@ -188,7 +188,7 @@ export default function QuoteDetailPage() {
         margin: { left: 15, right: 15 },
       })
 
-      const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+      const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
 
       // Total
       doc.setFont('helvetica', 'bold')

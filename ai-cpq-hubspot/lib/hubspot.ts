@@ -84,18 +84,18 @@ export async function createHubSpotDeal(deal: {
     pipeline: 'default',
   }
 
-  const created = await client.crm.deals.basicApi.create({ properties })
+  const created = await client.crm.deals.basicApi.create({ properties, associations: [] })
 
   if (deal.contactId) {
     try {
-      await client.crm.deals.associationsApi.create(
-        created.id,
-        'contact',
-        deal.contactId,
-        [{ associationCategory: 'HUBSPOT_DEFINED' as never, associationTypeId: 3 }],
-      )
+      // Associate deal with contact using v4 associations API
+      await (client.crm.associations as unknown as {
+        v4: { basicApi: { create: (a: string, b: string, c: string, d: string, e: unknown[]) => Promise<void> } }
+      }).v4.basicApi.create('deals', created.id, 'contacts', deal.contactId, [
+        { associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 3 },
+      ])
     } catch {
-      // Association failed, but deal was created
+      // Association failed, but deal was created — continue
     }
   }
 

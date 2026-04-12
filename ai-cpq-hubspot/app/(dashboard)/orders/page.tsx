@@ -100,7 +100,7 @@ export default function OrdersPage() {
         margin: { left: 15, right: 15 },
       })
 
-      const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+      const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
       doc.text(`Order Total: $${order.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 130, finalY)
