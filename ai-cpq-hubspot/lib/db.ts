@@ -192,5 +192,18 @@ class QueryBuilder {
 
 export const db = { from: (table: string) => new QueryBuilder(table) }
 
-// Drop-in alias — API routes import { supabaseAdmin } from '@/lib/db'
-export const supabaseAdmin = db
+// When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (cloud deployment),
+// use the real Supabase client. Otherwise fall back to local JSON file database.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildClient(): any {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (url && key) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createClient } = require('@supabase/supabase-js')
+    return createClient(url, key)
+  }
+  return db
+}
+
+export const supabaseAdmin = buildClient()
