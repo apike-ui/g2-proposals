@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 export interface ProductRow {
   sku: string
   name: string
@@ -18,7 +16,9 @@ function findValue(row: Record<string, unknown>, keys: string[]): unknown {
   return ''
 }
 
-export function parseExcelFile(buffer: Buffer): ProductRow[] {
+export async function parseExcelFile(buffer: Buffer): Promise<ProductRow[]> {
+  const XLSX = await import('xlsx')
+
   const workbook = XLSX.read(buffer, { type: 'buffer' })
   const sheetName = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[sheetName]
@@ -82,7 +82,9 @@ export function parseExcelFile(buffer: Buffer): ProductRow[] {
   return products
 }
 
-export function generateExcelTemplate(): Buffer {
+export async function generateExcelTemplate(): Promise<Buffer> {
+  const XLSX = await import('xlsx')
+
   const wb = XLSX.utils.book_new()
 
   const headers = ['SKU', 'Name', 'Description', 'Price', 'Category', 'Unit']

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Prevent bundling of packages that use Node.js native APIs
-  // xlsx uses 'fs' internally and must be required at runtime, not bundled
+  // xlsx is kept external so it is require()'d at runtime rather than bundled.
+  // Combined with dynamic import() in lib/excel.ts this ensures xlsx loads
+  // lazily inside the request handler — not during module initialization —
+  // so any load error returns a proper JSON 500 instead of crashing Vercel cold starts.
   serverExternalPackages: ['xlsx'],
 }
 

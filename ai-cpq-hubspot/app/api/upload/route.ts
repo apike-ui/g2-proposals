@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const products = parseExcelFile(buffer)
+    const products = await parseExcelFile(buffer)
 
     const results = { created: 0, updated: 0, errors: [] as string[] }
 
@@ -69,12 +69,16 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  // Returns the template file
-  const buffer = generateExcelTemplate()
-  return new NextResponse(buffer.buffer as ArrayBuffer, {
-    headers: {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': 'attachment; filename="cpq-product-template.xlsx"',
-    },
-  })
+  try {
+    const buffer = await generateExcelTemplate()
+    return new NextResponse(buffer.buffer as ArrayBuffer, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename="cpq-product-template.xlsx"',
+      },
+    })
+  } catch (err) {
+    console.error('Template generation error:', err)
+    return NextResponse.json({ error: 'Failed to generate template' }, { status: 500 })
+  }
 }
