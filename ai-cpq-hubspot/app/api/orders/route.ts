@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/db'
 
 function genOrderNumber() {
   const d = new Date()
@@ -31,15 +31,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { quoteId, customerName, customerEmail, customerCompany, shippingAddress, notes } = body
 
+    type QuoteRow = { total_amount: number; customer_name: string | null; customer_email: string | null; customer_company: string | null }
     let totalAmount = 0
-    let quoteInfo = null
+    let quoteInfo: QuoteRow | null = null
 
     if (quoteId) {
       const { data: q } = await supabaseAdmin
         .from('quotes')
         .select('total_amount, customer_name, customer_email, customer_company')
         .eq('id', quoteId).single()
-      if (q) { totalAmount = q.total_amount; quoteInfo = q }
+      if (q) { totalAmount = (q as QuoteRow).total_amount; quoteInfo = q as QuoteRow }
     }
 
     const { data: order, error } = await supabaseAdmin

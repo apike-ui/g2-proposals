@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/db'
 import { suggestProducts } from '@/lib/ai'
 
 export async function POST(request: NextRequest) {
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    const result = await suggestProducts(requirement, products || [])
+    type ProductRow = { sku: string; name: string; description: string | null; price: number }
+    const result = await suggestProducts(requirement, (products as ProductRow[]) || [])
     return NextResponse.json(result)
   } catch (err) {
     console.error('AI suggest error:', err)

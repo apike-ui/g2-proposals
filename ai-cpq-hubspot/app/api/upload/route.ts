@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseExcelFile, generateExcelTemplate } from '@/lib/excel'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {

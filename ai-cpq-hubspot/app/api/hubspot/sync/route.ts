@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/db'
 import { syncProductToHubSpot } from '@/lib/hubspot'
 
 export async function POST(request: NextRequest) {
@@ -15,9 +15,10 @@ export async function POST(request: NextRequest) {
     const { data: products, error } = await query
     if (error) throw error
 
+    type ProductRow = { id: string; sku: string; name: string; description: string | null; price: number }
     const results = { synced: 0, errors: [] as string[] }
 
-    for (const product of products || []) {
+    for (const product of (products as ProductRow[]) || []) {
       try {
         const hubspotId = await syncProductToHubSpot({
           sku: product.sku,
