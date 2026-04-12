@@ -1,23 +1,34 @@
 /**
- * Zero-dependency JSON file database.
- * Stores each table as a .json file in the .data/ directory.
- * Mimics the Supabase client API as a drop-in replacement.
+ * Zero-dependency JSON file database (local dev fallback).
+ * When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, uses real Supabase.
+ * Otherwise stores data as .json files in .data/ directory.
  */
 
+import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
 
 const DATA_DIR = path.join(process.cwd(), '.data')
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+
+// Only create the local data dir when needed — silently skip on read-only filesystems (Vercel)
+function ensureDataDir() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  } catch {
+    // Read-only filesystem — local JSON db unavailable, Supabase will be used instead
+  }
+}
 
 function readTable(table: string): Record<string, unknown>[] {
+  ensureDataDir()
   const file = path.join(DATA_DIR, `${table}.json`)
   if (!fs.existsSync(file)) return []
   try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return [] }
 }
 
 function writeTable(table: string, rows: Record<string, unknown>[]) {
+  ensureDataDir()
   fs.writeFileSync(path.join(DATA_DIR, `${table}.json`), JSON.stringify(rows, null, 2))
 }
 
@@ -29,7 +40,6 @@ function ilike(str: string | null | undefined, pattern: string): boolean {
   return new RegExp('^' + pattern.replace(/%/g, '.*') + '$', 'i').test(str ?? '')
 }
 
-// Split "a, b(c, d), e" by top-level commas only
 function splitTopLevel(s: string): string[] {
   const parts: string[] = []
   let depth = 0, cur = ''
@@ -43,32 +53,24 @@ function splitTopLevel(s: string): string[] {
   return parts
 }
 
-// Expand a row by resolving relation selects like "product:products(*)"
 function expandRow(row: Record<string, unknown>, selectStr: string): Record<string, unknown> {
   const parts = splitTopLevel(selectStr)
-  const out: Record<string, unknown> = { ...row } // always include base fields
+  const out: Record<string, unknown> = { ...row }
 
   for (const part of parts) {
-    if (part === '*') continue // already spread above
-    // Match: alias:table(subselect) — e.g. product:products(*) or quote:quotes(*, items:quote_items(*,product:products(*)))
+    if (part === '*') continue
     const m = part.match(/^(\w+):(\w+)\((.+)\)$/)
     if (!m) continue
-
     const [, alias, relTable, subSelect] = m
     const fkCol = `${alias}_id`
     const relId = row[fkCol]
-
     if (!relId) { out[alias] = null; continue }
-
     const relRows = readTable(relTable)
     const found = relRows.find(r => r.id === relId)
     if (!found) { out[alias] = null; continue }
-
-    // Recursively expand nested relations
     out[alias] = expandRow(found, subSelect)
   }
 
-  // Special case: quote → attach items → each item attaches product
   if (selectStr.includes('items:quote_items')) {
     const items = readTable('quote_items')
       .filter(i => i.quote_id === out.id)
@@ -113,7 +115,6 @@ class QueryBuilder {
   }
   or(expr: string) { this._orFilters = expr.split(',').map(s => s.trim()); return this }
 
-  // Make this a thenable so `await queryBuilder` works
   then<T>(
     onFulfilled: (val: DBResult) => T,
     onRejected?: (err: unknown) => T | PromiseLike<T>,
@@ -122,7 +123,6 @@ class QueryBuilder {
       try {
         const rows = readTable(this._table)
 
-        // INSERT
         if (this._op === 'insert') {
           const items = Array.isArray(this._data) ? this._data as Record<string, unknown>[] : [this._data as Record<string, unknown>]
           const now = new Date().toISOString()
@@ -132,7 +132,6 @@ class QueryBuilder {
           return
         }
 
-        // UPDATE
         if (this._op === 'update') {
           const now = new Date().toISOString()
           let last: Record<string, unknown> | null = null
@@ -145,14 +144,12 @@ class QueryBuilder {
           return
         }
 
-        // DELETE
         if (this._op === 'delete') {
           writeTable(this._table, rows.filter(r => !rowMatches(r, this._filters)))
           resolve({ data: null, error: null })
           return
         }
 
-        // SELECT
         let result = rows.filter(row => {
           if (!rowMatches(row, this._filters)) return false
           if (this._inFilter && !this._inFilter.vals.includes(row[this._inFilter.col])) return false
@@ -192,18 +189,15 @@ class QueryBuilder {
 
 export const db = { from: (table: string) => new QueryBuilder(table) }
 
-// When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (cloud deployment),
-// use the real Supabase client. Otherwise fall back to local JSON file database.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildClient(): any {
+// Use real Supabase when env vars are set (Vercel/cloud), otherwise use local JSON db
+function buildClient() {
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (url && key) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createClient } = require('@supabase/supabase-js')
     return createClient(url, key)
   }
   return db
 }
 
-export const supabaseAdmin = buildClient()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const supabaseAdmin: any = buildClient()
