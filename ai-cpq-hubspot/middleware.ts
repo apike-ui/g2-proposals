@@ -3,54 +3,30 @@ import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login']
+const ADMIN_ONLY_PATHS = ['/upload', '/integrations', '/settings', '/rules', '/api/upload', '/api/integrations', '/api/admin', '/api/rules']
 
-// Routes only admins may access
-const ADMIN_ONLY_PATHS = [
-  '/upload',
-  '/integrations',
-  '/settings',
-  '/api/upload',
-  '/api/integrations',
-  '/api/admin',
-]
-
-function isAdminOnly(pathname: string) {
-  return ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p))
-}
+function isAdminOnly(p: string) { return ADMIN_ONLY_PATHS.some((a) => p.startsWith(a)) }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next()
-  }
-
-  // API routes: return JSON errors
   if (pathname.startsWith('/api/')) {
     const res = NextResponse.next()
     const session = await getIronSession<SessionData>(request, res, sessionOptions)
-    if (!session.isLoggedIn) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (isAdminOnly(pathname) && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Treat undefined role as admin for backward compatibility
+    const isAdmin = !session.role || session.role === 'admin'
+    if (isAdminOnly(pathname) && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     return res
   }
 
-  // Page routes: redirect to login
   const res = NextResponse.next()
   const session = await getIronSession<SessionData>(request, res, sessionOptions)
-  if (!session.isLoggedIn) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-  if (isAdminOnly(pathname) && session.role !== 'admin') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
+  if (!session.isLoggedIn) return NextResponse.redirect(new URL('/login', request.url))
+  const isAdmin = !session.role || session.role === 'admin'
+  if (isAdminOnly(pathname) && !isAdmin) return NextResponse.redirect(new URL('/dashboard', request.url))
   return res
 }
 
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'],
-}
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'] }
