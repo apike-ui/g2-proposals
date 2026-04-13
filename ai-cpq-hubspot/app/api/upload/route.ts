@@ -16,7 +16,20 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const products = parseExcelFile(buffer)
+    const products = await parseExcelFile(buffer)
+
+    // Create upload batch record
+    let batchId: string | null = null
+    try {
+      const { data: batch } = await supabaseAdmin
+        .from('upload_batches')
+        .insert({ filename: file.name })
+        .select('id')
+        .single()
+      batchId = batch?.id || null
+    } catch {
+      // batch tracking is optional
+    }
 
     const results = { created: 0, updated: 0, errors: [] as string[] }
 
@@ -34,6 +47,7 @@ export async function POST(request: NextRequest) {
               price: product.price || 0,
               category: product.category || null,
               unit: product.unit || 'each',
+              batch_id: batchId,
               updated_at: new Date().toISOString(),
             })
             .eq('id', existing.id)
@@ -48,17 +62,18 @@ export async function POST(request: NextRequest) {
             price: product.price || 0,
             category: product.category || null,
             unit: product.unit || 'each',
+            batch_id: batchId,
           })
 
           if (error) results.errors.push(`Create failed for ${product.sku}: ${error.message}`)
           else results.created++
         }
-      } catch (err) {
+      } catch {
         results.errors.push(`Error processing ${product.sku}`)
       }
     }
 
-    return NextResponse.json({ success: true, total: products.length, ...results })
+    return NextResponse.json({ success: true, total: products.length, batchId, ...results })
   } catch (err) {
     console.error('Upload error:', err)
     return NextResponse.json(
@@ -69,8 +84,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  // Returns the template file
-  const buffer = generateExcelTemplate()
+  const buffer = await generateExcelTemplate()
   return new NextResponse(buffer.buffer as ArrayBuffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

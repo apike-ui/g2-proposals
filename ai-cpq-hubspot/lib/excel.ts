@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx'
-
 export interface ProductRow {
   sku: string
   name: string
@@ -18,14 +16,13 @@ function findValue(row: Record<string, unknown>, keys: string[]): unknown {
   return ''
 }
 
-export function parseExcelFile(buffer: Buffer): ProductRow[] {
+export async function parseExcelFile(buffer: Buffer): Promise<ProductRow[]> {
+  const XLSX = await import('xlsx')
   const workbook = XLSX.read(buffer, { type: 'buffer' })
   const sheetName = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[sheetName]
 
-  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
-    defval: '',
-  })
+  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
 
   if (!data || data.length === 0) {
     throw new Error('File is empty or has no data rows.')
@@ -82,7 +79,8 @@ export function parseExcelFile(buffer: Buffer): ProductRow[] {
   return products
 }
 
-export function generateExcelTemplate(): Buffer {
+export async function generateExcelTemplate(): Promise<Buffer> {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
 
   const headers = ['SKU', 'Name', 'Description', 'Price', 'Category', 'Unit']
@@ -94,11 +92,7 @@ export function generateExcelTemplate(): Buffer {
 
   const wsData = [headers, ...sampleData]
   const ws = XLSX.utils.aoa_to_sheet(wsData)
-
-  ws['!cols'] = [
-    { width: 15 }, { width: 35 }, { width: 50 }, { width: 12 }, { width: 20 }, { width: 15 },
-  ]
-
+  ws['!cols'] = [{ width: 15 }, { width: 35 }, { width: 50 }, { width: 12 }, { width: 20 }, { width: 15 }]
   XLSX.utils.book_append_sheet(wb, ws, 'Products')
   return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }))
 }

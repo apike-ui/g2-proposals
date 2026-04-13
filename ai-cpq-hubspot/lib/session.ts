@@ -1,7 +1,10 @@
 import { SessionOptions } from 'iron-session'
 
 export interface SessionData {
+  userId?: string
   username?: string
+  displayName?: string
+  role?: 'admin' | 'user'
   isLoggedIn: boolean
 }
 

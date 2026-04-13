@@ -2,36 +2,56 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
 
-const publicPaths = ['/login', '/api/auth/login']
+const ADMIN_ONLY_PATHS = [
+  '/upload',
+  '/integrations',
+  '/settings',
+  '/rules',
+  '/api/upload',
+  '/api/integrations',
+  '/api/admin',
+  '/api/rules',
+]
+
+function isAdminOnly(pathname: string): boolean {
+  return ADMIN_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public paths
-  if (publicPaths.some((path) => pathname.startsWith(path))) {
+  if (
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/_next') ||
+    pathname === '/login' ||
+    pathname === '/favicon.ico'
+  ) {
     return NextResponse.next()
   }
 
-  // Protect API routes
-  if (pathname.startsWith('/api/')) {
-    const response = NextResponse.next()
-    const session = await getIronSession<SessionData>(request, response, sessionOptions)
-    if (!session.isLoggedIn) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    return response
-  }
-
-  // Protect page routes
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)
+
   if (!session.isLoggedIn) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  return response
+  // Undefined role = legacy session pre-RBAC, treat as admin
+  const isAdmin = !session.role || session.role === 'admin'
+
+  if (isAdminOnly(pathname) && !isAdmin) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
