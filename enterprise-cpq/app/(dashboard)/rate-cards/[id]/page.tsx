@@ -64,6 +64,7 @@ export default function RateCardBuilderPage() {
   const [cardData, setCardData] = useState<RateCardData>(buildEmptyCardData())
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [activeAddon, setActiveAddon] = useState<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -79,7 +80,9 @@ export default function RateCardBuilderPage() {
         ])
         const [rcData, meData] = await Promise.all([rcRes.json(), meRes.json()])
 
-        if (rcData.rateCard) {
+        if (rcData.error || !rcData.rateCard) {
+          setNotFound(true)
+        } else if (rcData.rateCard) {
           setMeta({
             id: rcData.rateCard.id,
             name: rcData.rateCard.name,
@@ -288,6 +291,15 @@ export default function RateCardBuilderPage() {
 
   if (loading) {
     return <div className="p-6 text-center text-gray-400 py-16">Loading...</div>
+  }
+
+  if (notFound) {
+    return (
+      <div className="p-6 text-center py-24">
+        <p className="text-gray-500 mb-4">Rate card not found.</p>
+        <Link href="/proposals" className="text-sm text-red-500 hover:underline">← Back to Proposals</Link>
+      </div>
+    )
   }
 
   const readOnly = !isAdmin
