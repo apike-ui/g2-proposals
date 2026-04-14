@@ -24,7 +24,7 @@ export default function SettingsPage() {
   const [me, setMe] = useState<Me | null>(null)
 
   // Profile form
-  const [profileForm, setProfileForm] = useState({ displayName: '', currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [profileForm, setProfileForm] = useState({ username: '', displayName: '', currentPassword: '', newPassword: '', confirmPassword: '' })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMsg, setProfileMsg] = useState('')
   const [profileError, setProfileError] = useState('')
@@ -44,7 +44,7 @@ export default function SettingsPage() {
     fetch('/api/auth/me').then(r => r.json()).then(data => {
       if (data.userId) {
         setMe(data)
-        setProfileForm(f => ({ ...f, displayName: data.displayName || data.username }))
+        setProfileForm(f => ({ ...f, username: data.username || '', displayName: data.displayName || data.username }))
       }
     })
   }, [])
@@ -73,6 +73,7 @@ export default function SettingsPage() {
     }
 
     const payload: Record<string, string> = { displayName: profileForm.displayName }
+    if (profileForm.username.trim()) payload.username = profileForm.username.trim()
     if (profileForm.newPassword) {
       payload.currentPassword = profileForm.currentPassword
       payload.newPassword = profileForm.newPassword
@@ -87,7 +88,7 @@ export default function SettingsPage() {
     if (res.ok) {
       setProfileMsg('Profile updated successfully')
       setProfileForm(f => ({ ...f, currentPassword: '', newPassword: '', confirmPassword: '' }))
-      if (data.displayName) setMe(m => m ? { ...m, displayName: data.displayName } : m)
+      setMe(m => m ? { ...m, username: data.username || m.username, displayName: data.displayName || m.displayName } : m)
     } else {
       setProfileError(data.error || 'Save failed')
     }
@@ -183,6 +184,17 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Username <span className="text-gray-400 font-normal">(used to log in)</span></label>
+              <input
+                type="text"
+                value={profileForm.username}
+                onChange={e => setProfileForm(f => ({ ...f, username: e.target.value }))}
+                className="input"
+                placeholder="Login username"
+                autoComplete="username"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Display Name</label>
               <input

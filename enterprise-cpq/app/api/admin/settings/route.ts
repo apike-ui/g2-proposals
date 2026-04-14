@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
     // Update the session so changes are reflected immediately
-    const response = NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true, username: username || session.username, displayName: displayName || session.displayName })
     const updatedSession = await getIronSession<SessionData>(request, response, sessionOptions)
     updatedSession.userId = session.userId
     updatedSession.username = username || session.username
