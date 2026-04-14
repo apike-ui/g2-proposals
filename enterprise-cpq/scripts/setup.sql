@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on users" ON users FOR ALL TO service_role USING (true) WITH CHECK (true);
 

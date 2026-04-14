@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('users')
-      .select('id, username, display_name, role, created_at')
+      .select('id, username, display_name, role, email, created_at')
       .order('created_at', { ascending: true })
 
     if (error) throw error
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { username, displayName, password, role } = body
+    const { username, displayName, password, role, email } = body
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 })
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcryptjs.hash(password, 10)
     const { data, error } = await supabaseAdmin
       .from('users')
-      .insert({ username, display_name: displayName || username, password_hash: passwordHash, role: role || 'user' })
-      .select('id, username, display_name, role')
+      .insert({ username, display_name: displayName || username, password_hash: passwordHash, role: role || 'user', email: email || null })
+      .select('id, username, display_name, role, email')
       .single()
 
     if (error) {

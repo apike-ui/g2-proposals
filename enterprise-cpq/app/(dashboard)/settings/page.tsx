@@ -6,6 +6,7 @@ interface User {
   id: string
   username: string
   display_name?: string
+  email?: string
   role: 'admin' | 'user'
   created_at?: string
 }
@@ -34,10 +35,12 @@ export default function SettingsPage() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [showUserModal, setShowUserModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [userForm, setUserForm] = useState({ username: '', displayName: '', password: '', role: 'user' as 'admin' | 'user' })
+  const [userForm, setUserForm] = useState({ username: '', displayName: '', email: '', password: '', role: 'user' as 'admin' | 'user' })
   const [userSaving, setUserSaving] = useState(false)
   const [userError, setUserError] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [sendingCreds, setSendingCreds] = useState<string | null>(null)
+  const [credsResult, setCredsResult] = useState<{ tempPassword: string; sentTo: string; error?: string } | null>(null)
   const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
@@ -98,16 +101,34 @@ export default function SettingsPage() {
 
   function openCreateUser() {
     setEditingUser(null)
-    setUserForm({ username: '', displayName: '', password: '', role: 'user' })
+    setUserForm({ username: '', displayName: '', email: '', password: '', role: 'user' })
     setUserError('')
     setShowUserModal(true)
   }
 
   function openEditUser(user: User) {
     setEditingUser(user)
-    setUserForm({ username: user.username, displayName: user.display_name || '', password: '', role: user.role })
+    setUserForm({ username: user.username, displayName: user.display_name || '', email: user.email || '', password: '', role: user.role })
     setUserError('')
     setShowUserModal(true)
+  }
+
+  async function sendCredentials(userId: string) {
+    setSendingCreds(userId)
+    setCredsResult(null)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/send-credentials`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setCredsResult({ tempPassword: data.tempPassword, sentTo: data.sentTo })
+      } else {
+        setCredsResult({ tempPassword: data.tempPassword || '', sentTo: '', error: data.error })
+      }
+    } catch {
+      setCredsResult({ tempPassword: '', sentTo: '', error: 'Request failed' })
+    } finally {
+      setSendingCreds(null)
+    }
   }
 
   async function saveUser() {
@@ -123,6 +144,7 @@ export default function SettingsPage() {
       username: userForm.username,
       displayName: userForm.displayName,
       role: userForm.role,
+      email: userForm.email,
     }
     if (userForm.password) payload.password = userForm.password
 
@@ -293,6 +315,17 @@ export default function SettingsPage() {
                     {user.role}
                   </span>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => sendCredentials(user.id)}
+                      disabled={sendingCreds === user.id}
+                      title={user.email ? `Send credentials to ${user.email}` : 'Add an email address to this user first'}
+                      className={`p-1 rounded transition-colors ${user.email ? 'text-gray-400 hover:text-green-600' : 'text-gray-200 cursor-not-allowed'}`}
+                    >
+                      {sendingCreds === user.id
+                        ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                      }
+                    </button>
                     <button onClick={() => openEditUser(user)} className="text-gray-400 hover:text-blue-600 p-1 rounded">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -356,6 +389,16 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email <span className="text-gray-400 font-normal">(for credential emails)</span></label>
+                    <input
+                      type="email"
+                      value={userForm.email}
+                      onChange={e => setUserForm(f => ({ ...f, email: e.target.value }))}
+                      placeholder="john@company.com"
+                      className="input"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       {editingUser ? 'New Password (leave blank to keep)' : 'Password'}
                     </label>
@@ -382,6 +425,32 @@ export default function SettingsPage() {
                     {userSaving ? 'Saving…' : editingUser ? 'Update User' : 'Create User'}
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Credentials result modal */}
+          {credsResult && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6">
+                {credsResult.error && !credsResult.tempPassword ? (
+                  <>
+                    <h3 className="text-lg font-semibold text-red-600 mb-2">Email not sent</h3>
+                    <p className="text-sm text-gray-600 mb-4">{credsResult.error}</p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">Credentials sent</h3>
+                    {credsResult.sentTo && <p className="text-sm text-gray-500 mb-4">Email sent to <strong>{credsResult.sentTo}</strong></p>}
+                    {credsResult.error && <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-4">{credsResult.error} — save the password below.</p>}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Temporary Password</p>
+                      <p className="font-mono text-lg font-semibold text-gray-900 tracking-widest select-all">{credsResult.tempPassword}</p>
+                    </div>
+                    <p className="text-xs text-gray-400">The user&apos;s password has been reset to this temporary password.</p>
+                  </>
+                )}
+                <button onClick={() => setCredsResult(null)} className="btn-primary w-full mt-4">Close</button>
               </div>
             </div>
           )}

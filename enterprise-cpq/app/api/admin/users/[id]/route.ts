@@ -13,12 +13,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const body = await request.json()
-    const { username, displayName, password, role } = body
+    const { username, displayName, password, role, email } = body
 
     const updates: Record<string, unknown> = {
       username,
       display_name: displayName,
       role,
+      email: email || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -30,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       .from('users')
       .update(updates)
       .eq('id', params.id)
-      .select('id, username, display_name, role')
+      .select('id, username, display_name, role, email')
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
