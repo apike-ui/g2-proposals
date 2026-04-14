@@ -217,7 +217,7 @@ export const db = { from: (table: string) => new QueryBuilder(table) }
 // use the real Supabase client. Otherwise fall back to local JSON file database.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildClient(): any {
-  const url = process.env.SUPABASE_URL
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (url && key) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
