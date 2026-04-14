@@ -22,9 +22,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query
-    if (error) throw error
+    if (error) {
+      console.error('Products fetch error:', error.message)
+      return NextResponse.json({ products: [] })
+    }
 
-    return NextResponse.json({ products: data })
+    return NextResponse.json({ products: data || [] })
   } catch (err) {
     console.error('Products GET:', err)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })

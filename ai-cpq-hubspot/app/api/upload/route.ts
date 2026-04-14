@@ -39,31 +39,35 @@ export async function POST(request: NextRequest) {
           .from('products').select('id').eq('sku', product.sku).single()
 
         if (existing) {
+          const updatePayload: Record<string, unknown> = {
+            name: product.name,
+            description: product.description || null,
+            price: product.price || 0,
+            category: product.category || null,
+            unit: product.unit || 'each',
+            updated_at: new Date().toISOString(),
+          }
+          if (batchId) updatePayload.batch_id = batchId
+
           const { error } = await supabaseAdmin
             .from('products')
-            .update({
-              name: product.name,
-              description: product.description || null,
-              price: product.price || 0,
-              category: product.category || null,
-              unit: product.unit || 'each',
-              batch_id: batchId,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('id', existing.id)
 
           if (error) results.errors.push(`Update failed for ${product.sku}: ${error.message}`)
           else results.updated++
         } else {
-          const { error } = await supabaseAdmin.from('products').insert({
+          const insertPayload: Record<string, unknown> = {
             sku: product.sku,
             name: product.name,
             description: product.description || null,
             price: product.price || 0,
             category: product.category || null,
             unit: product.unit || 'each',
-            batch_id: batchId,
-          })
+          }
+          if (batchId) insertPayload.batch_id = batchId
+
+          const { error } = await supabaseAdmin.from('products').insert(insertPayload)
 
           if (error) results.errors.push(`Create failed for ${product.sku}: ${error.message}`)
           else results.created++
