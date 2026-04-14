@@ -36,7 +36,11 @@ function rowMatches(row: Record<string, unknown>, filters: Record<string, unknow
 }
 
 function ilike(str: string | null | undefined, pattern: string): boolean {
-  return new RegExp('^' + pattern.replace(/%/g, '.*') + '$', 'i').test(str ?? '')
+  // Escape regex special chars FIRST, then convert SQL % wildcard to .*
+  const escaped = pattern
+    .replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
+    .replace(/%/g, '.*')
+  return new RegExp('^' + escaped + '$', 'i').test(str ?? '')
 }
 
 // Split "a, b(c, d), e" by top-level commas only
@@ -110,7 +114,12 @@ class QueryBuilder {
 
   constructor(table: string) { this._table = table }
 
-  select(cols = '*') { this._select = cols; this._op = 'select'; return this }
+  // Root-cause fix: do NOT override _op here.
+  // _op defaults to 'select', so from('x').select('*') still works.
+  // But insert(data).select() / update(data).select() no longer get silently
+  // converted to a SELECT query — they stay as INSERT/UPDATE and return the
+  // written rows (handled in the respective op branches below).
+  select(cols = '*') { this._select = cols; return this }
   insert(data: unknown) { this._op = 'insert'; this._data = data; return this }
   update(data: Record<string, unknown>) { this._op = 'update'; this._data = data; return this }
   delete() { this._op = 'delete'; return this }
@@ -121,7 +130,9 @@ class QueryBuilder {
   order(col: string, opts?: { ascending?: boolean }) {
     this._orderBy = { col, asc: opts?.ascending !== false }; return this
   }
-  or(expr: string) { this._orFilters = expr.split(',').map(s => s.trim()); return this }
+  // Split only on commas that are immediately followed by a field name + dot
+  // (e.g. "name.ilike.%Acme, Inc%,sku.ilike.%Acme, Inc%" splits correctly).
+  or(expr: string) { this._orFilters = expr.split(/,(?=\w+\.)/).map(s => s.trim()); return this }
 
   // Make this a thenable so `await queryBuilder` works
   then<T>(

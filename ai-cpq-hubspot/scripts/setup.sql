@@ -150,11 +150,15 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES upload_ba
 CREATE TABLE IF NOT EXISTS integrations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   type VARCHAR(100) UNIQUE NOT NULL,
+  name VARCHAR(255),
   config JSONB NOT NULL DEFAULT '{}',
   enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add name column if the table was created without it
+ALTER TABLE integrations ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 
 ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access on integrations" ON integrations FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -183,6 +187,24 @@ DROP TRIGGER IF EXISTS update_rules_updated_at ON rules;
 CREATE TRIGGER update_rules_updated_at
   BEFORE UPDATE ON rules
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Quote audit log table (tracks every edit: who, when, what changed)
+CREATE TABLE IF NOT EXISTS quote_audit_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  quote_id UUID REFERENCES quotes(id) ON DELETE CASCADE NOT NULL,
+  username VARCHAR(255) NOT NULL,
+  display_name VARCHAR(500),
+  changed_fields JSONB NOT NULL DEFAULT '[]',
+  old_values JSONB NOT NULL DEFAULT '{}',
+  new_values JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_quote_audit_log_quote_id ON quote_audit_log(quote_id);
+CREATE INDEX IF NOT EXISTS idx_quote_audit_log_created_at ON quote_audit_log(created_at);
+
+ALTER TABLE quote_audit_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access on quote_audit_log" ON quote_audit_log FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Sample data (optional - remove if not needed)
 INSERT INTO products (sku, name, description, price, category, unit) VALUES
