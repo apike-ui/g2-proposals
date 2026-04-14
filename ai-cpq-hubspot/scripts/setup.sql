@@ -112,6 +112,78 @@ CREATE POLICY "Service role full access on quotes" ON quotes FOR ALL TO service_
 CREATE POLICY "Service role full access on quote_items" ON quote_items FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Service role full access on orders" ON orders FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+-- Users table (for authentication)
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username VARCHAR(255) UNIQUE NOT NULL,
+  display_name VARCHAR(500),
+  password_hash TEXT NOT NULL,
+  role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access on users" ON users FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Upload batches table (for tracking SKU imports)
+CREATE TABLE IF NOT EXISTS upload_batches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  filename VARCHAR(500) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE upload_batches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access on upload_batches" ON upload_batches FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Add batch_id to products if not already present
+ALTER TABLE products ADD COLUMN IF NOT EXISTS batch_id UUID REFERENCES upload_batches(id) ON DELETE SET NULL;
+
+-- Integrations table (for CRM/data warehouse configs)
+CREATE TABLE IF NOT EXISTS integrations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  type VARCHAR(100) UNIQUE NOT NULL,
+  config JSONB NOT NULL DEFAULT '{}',
+  enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access on integrations" ON integrations FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP TRIGGER IF EXISTS update_integrations_updated_at ON integrations;
+CREATE TRIGGER update_integrations_updated_at
+  BEFORE UPDATE ON integrations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Rules table (for CPQ approval and compliance rules)
+CREATE TABLE IF NOT EXISTS rules (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(500) NOT NULL,
+  team VARCHAR(255) NOT NULL,
+  type VARCHAR(100) NOT NULL,
+  condition JSONB NOT NULL DEFAULT '{}',
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access on rules" ON rules FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP TRIGGER IF EXISTS update_rules_updated_at ON rules;
+CREATE TRIGGER update_rules_updated_at
+  BEFORE UPDATE ON rules
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Sample data (optional - remove if not needed)
 INSERT INTO products (sku, name, description, price, category, unit) VALUES
   ('SW-ENT-001', 'Enterprise Software License', 'Annual enterprise license for up to 50 users. Includes all modules and priority support.', 4999.00, 'Software', 'license/year'),
