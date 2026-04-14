@@ -8,8 +8,18 @@ import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
 
-const DATA_DIR = path.join(process.cwd(), '.data')
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+const DATA_DIR = (() => {
+  const preferred = path.join(process.cwd(), '.data')
+  try {
+    if (!fs.existsSync(preferred)) fs.mkdirSync(preferred, { recursive: true })
+    return preferred
+  } catch {
+    // Vercel / read-only filesystems — fall back to /tmp
+    const tmp = path.join('/tmp', '.data-cpq')
+    try { if (!fs.existsSync(tmp)) fs.mkdirSync(tmp, { recursive: true }) } catch { /* ignore */ }
+    return tmp
+  }
+})()
 
 function readTable(table: string): Record<string, unknown>[] {
   const file = path.join(DATA_DIR, `${table}.json`)

@@ -17,12 +17,17 @@ export default function ProductsPage() {
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (search) params.set('search', search)
-    const res = await fetch(`/api/products?${params}`)
-    const data = await res.json()
-    setProducts(data.products || [])
-    setLoading(false)
+    try {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      const res = await fetch(`/api/products?${params}`)
+      const data = await res.json()
+      setProducts(data.products || [])
+    } catch {
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
   }, [search])
 
   useEffect(() => {

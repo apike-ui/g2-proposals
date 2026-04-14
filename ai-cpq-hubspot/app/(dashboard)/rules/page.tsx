@@ -49,10 +49,15 @@ export default function RulesPage() {
 
   const fetchRules = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/rules')
-    const data = await res.json()
-    setRules(data.rules || [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/rules')
+      const data = await res.json()
+      setRules(data.rules || [])
+    } catch {
+      setRules([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchRules() }, [fetchRules])

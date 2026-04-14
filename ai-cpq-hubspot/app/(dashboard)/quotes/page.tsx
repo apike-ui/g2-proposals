@@ -20,13 +20,18 @@ export default function QuotesPage() {
 
   const fetchQuotes = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (search) params.set('search', search)
-    if (statusFilter) params.set('status', statusFilter)
-    const res = await fetch(`/api/quotes?${params}`)
-    const data = await res.json()
-    setQuotes(data.quotes || [])
-    setLoading(false)
+    try {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      if (statusFilter) params.set('status', statusFilter)
+      const res = await fetch(`/api/quotes?${params}`)
+      const data = await res.json()
+      setQuotes(data.quotes || [])
+    } catch {
+      setQuotes([])
+    } finally {
+      setLoading(false)
+    }
   }, [search, statusFilter])
 
   useEffect(() => {

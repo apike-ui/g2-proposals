@@ -19,12 +19,17 @@ export default function OrdersPage() {
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (statusFilter) params.set('status', statusFilter)
-    const res = await fetch(`/api/orders?${params}`)
-    const data = await res.json()
-    setOrders(data.orders || [])
-    setLoading(false)
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter) params.set('status', statusFilter)
+      const res = await fetch(`/api/orders?${params}`)
+      const data = await res.json()
+      setOrders(data.orders || [])
+    } catch {
+      setOrders([])
+    } finally {
+      setLoading(false)
+    }
   }, [statusFilter])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
