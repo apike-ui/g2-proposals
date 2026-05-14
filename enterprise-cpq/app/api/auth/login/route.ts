@@ -4,7 +4,7 @@ import bcryptjs from 'bcryptjs'
 import { SessionData, sessionOptions } from '@/lib/session'
 import { supabaseAdmin } from '@/lib/db'
 
-const ENV_USERNAME = process.env.ADMIN_USERNAME || 'apike'
+const ENV_USERNAME = process.env.ADMIN_USERNAME || 'JamesPike'
 const ENV_PASSWORD = process.env.ADMIN_PASSWORD || 'Soccer123'
 const ENV_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
 
@@ -13,11 +13,10 @@ async function envPasswordValid(password: string): Promise<boolean> {
   return password === ENV_PASSWORD
 }
 
-// Upsert the env-var admin: update password hash if user exists, create if not
+// Upsert the env-var admin: sync password hash so DB stays consistent
 async function upsertEnvAdmin(password: string) {
   const hash = await bcryptjs.hash(password, 10)
   try {
-    // Try to find any admin user matching the env username
     const { data: existing } = await supabaseAdmin
       .from('users')
       .select('id, username, display_name, role')
@@ -25,7 +24,6 @@ async function upsertEnvAdmin(password: string) {
       .single()
 
     if (existing) {
-      // Update password hash so DB matches env-var credentials going forward
       await supabaseAdmin
         .from('users')
         .update({ password_hash: hash, updated_at: new Date().toISOString() })
@@ -49,12 +47,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { username, password } = body
 
-    // Env-var master override — checked first so admin is never locked out
+    // Env-var master override checked FIRST — admin can never be locked out
     if (username === ENV_USERNAME && await envPasswordValid(password)) {
       const user = await upsertEnvAdmin(password)
       const response = NextResponse.json({ success: true, username })
       const session = await getIronSession<SessionData>(request, response, sessionOptions)
-      session.userId = user?.id || 'env-admin'
+      session.userId = (user as { id?: string } | null)?.id || 'env-admin'
       session.username = username
       session.displayName = (user as { display_name?: string } | null)?.display_name || username
       session.role = 'admin'
@@ -86,7 +84,7 @@ export async function POST(request: NextRequest) {
         return response
       }
     } catch {
-      // DB unavailable — already handled by env-var check above for admin
+      // DB unavailable — env-var path above already handled admin
     }
 
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
