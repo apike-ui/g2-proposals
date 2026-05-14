@@ -4,7 +4,7 @@ import bcryptjs from 'bcryptjs'
 import { SessionData, sessionOptions } from '@/lib/session'
 import { supabaseAdmin } from '@/lib/db'
 
-const ENV_USERNAME = process.env.ADMIN_USERNAME || 'apike'
+const ENV_USERNAME = process.env.ADMIN_USERNAME || 'JamesPike'
 const ENV_PASSWORD = process.env.ADMIN_PASSWORD || 'Soccer123'
 const ENV_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
 
