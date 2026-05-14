@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         customer: body.customer || '',
         owner: body.owner || session.displayName || session.username || '',
         card_data: body.card_data || { basePkgs: {}, addons: {}, nonAcv: {} },
-        created_by: session.userId,
+        created_by: session.userId && session.userId !== 'env-admin' ? session.userId : null,
       })
       .select('*')
       .single()

@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('g2_proposals')
-      .insert({ name, customer, rep, created_by: session.userId })
+      .insert({ name, customer, rep, created_by: session.userId && session.userId !== 'env-admin' ? session.userId : null })
       .select('*')
       .single()
 
