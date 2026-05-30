@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import bcryptjs from 'bcryptjs'
 import { SessionData, sessionOptions } from '@/lib/session'
-import { supabaseAdmin } from '@/lib/db'
+import { supabaseAdmin, isMissingColumnError } from '@/lib/db'
 
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -36,11 +36,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const { data: user } = await supabaseAdmin
+    const { data: user, error: selErr } = await supabaseAdmin
       .from('users')
       .select('id, username, display_name, email')
       .eq('id', params.id)
       .single()
+
+    // Deployed DB may predate the email migration
+    if (selErr && isMissingColumnError(selErr, 'email')) {
+      return NextResponse.json({ error: 'The users table has no email column yet. Run the database migration to add it before sending credentials.' }, { status: 400 })
+    }
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     if (!user.email) return NextResponse.json({ error: 'User has no email address. Edit the user to add one first.' }, { status: 400 })

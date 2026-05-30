@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import bcryptjs from 'bcryptjs'
 import { SessionData, sessionOptions } from '@/lib/session'
-import { supabaseAdmin } from '@/lib/db'
+import { supabaseAdmin, isMissingColumnError } from '@/lib/db'
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -14,6 +14,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const body = await request.json()
     const { username, displayName, password, role, email } = body
+
+    if (role && !['admin', 'user'].includes(role)) {
+      return NextResponse.json({ error: 'Role must be admin or user' }, { status: 400 })
+    }
 
     const updates: Record<string, unknown> = {
       username,
@@ -27,12 +31,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updates.password_hash = await bcryptjs.hash(password, 10)
     }
 
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('users')
       .update(updates)
       .eq('id', params.id)
       .select('id, username, display_name, role, email')
       .single()
+
+    // Deployed DB may predate the email migration — update without email
+    if (error && isMissingColumnError(error, 'email')) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { email: _omit, ...updatesNoEmail } = updates
+      ;({ data, error } = await supabaseAdmin
+        .from('users')
+        .update(updatesNoEmail)
+        .eq('id', params.id)
+        .select('id, username, display_name, role')
+        .single())
+    }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     if (!data) return NextResponse.json({ error: 'User not found' }, { status: 404 })

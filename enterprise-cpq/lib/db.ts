@@ -228,3 +228,25 @@ function buildClient(): any {
 }
 
 export const supabaseAdmin = buildClient()
+
+/**
+ * Detects the PostgREST/Postgres error raised when a column referenced in a
+ * query does not exist in the live schema. This happens when a migration
+ * (e.g. adding `users.email`) has not been applied to the deployed database.
+ * Callers can use this to retry the operation without the missing column.
+ */
+export function isMissingColumnError(
+  err: { code?: string; message?: string } | null | undefined,
+  column: string,
+): boolean {
+  if (!err) return false
+  const msg = (err.message || '').toLowerCase()
+  const col = column.toLowerCase()
+  return (
+    err.code === 'PGRST204' || // PostgREST: column not found in schema cache (writes)
+    err.code === '42703' ||    // Postgres: undefined_column
+    (msg.includes(`'${col}'`) && (msg.includes('schema cache') || msg.includes('column'))) ||
+    (msg.includes(col) && msg.includes('does not exist'))
+  )
+}
+
