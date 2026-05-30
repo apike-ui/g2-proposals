@@ -53,11 +53,14 @@ interface LineItem {
   totalNet: number
 }
 
-/** Computes the fully-expanded line items for one product. */
+/** Computes the fully-expanded line items for one product.
+ *  addonProductCounts: map of addonId -> how many products in the proposal use that addon (for rate-card volume discounts).
+ */
 export function calcProductLineItems(
   product: ProposalProduct,
   rateCard?: RateCardData | null,
   proposalDiscPct = 0,
+  addonProductCounts?: Record<string, number>,
 ): LineItem[] {
   const items: LineItem[] = []
 
@@ -85,9 +88,24 @@ export function calcProductLineItems(
     const addon = ADDON_CATALOG.find(a => a.id === addonId)
     if (!addon) continue
 
-    const listPrice = getAddonTierPrice(addonId, state.tierIdx, rateCard)
+    let tierPrice = getAddonTierPrice(addonId, state.tierIdx, rateCard)
+
+    // Apply rate-card volume discount if present and a product count map was provided
+    if (rateCard && addonProductCounts) {
+      const rcAddon = rateCard.addons?.[addonId]
+      if (rcAddon?.volumeDisc?.length) {
+        const prodCount = addonProductCounts[addonId] ?? 1
+        const applicable = rcAddon.volumeDisc
+          .filter(v => prodCount >= v.minProducts)
+          .sort((a, b) => b.minProducts - a.minProducts)
+        if (applicable.length > 0) {
+          tierPrice = Math.round(tierPrice * (1 - applicable[0].discPct / 100))
+        }
+      }
+    }
+
     const customRate = state.rate ? parseFloat(state.rate) : null
-    const effectiveList = customRate != null && !isNaN(customRate) ? customRate : listPrice
+    const effectiveList = customRate != null && !isNaN(customRate) ? customRate : tierPrice
     const discPct = addon.noDisc ? 0 : (parseFloat(state.disc) || 0) + proposalDiscPct
     const netPrice = applyDiscount(effectiveList, discPct)
     const qty = state.qty > 0 ? state.qty : 1
@@ -106,13 +124,25 @@ export function calcProductLineItems(
   return items
 }
 
+/** Builds a map of addonId -> number of products that have that addon enabled. */
+export function buildAddonProductCounts(products: ProposalProduct[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const p of products) {
+    for (const [addonId, state] of Object.entries(p.addons)) {
+      if (state.on) counts[addonId] = (counts[addonId] ?? 0) + 1
+    }
+  }
+  return counts
+}
+
 /** Returns the total ACV for one product. */
 export function calcProductTotal(
   product: ProposalProduct,
   rateCard?: RateCardData | null,
   proposalDiscPct = 0,
+  addonProductCounts?: Record<string, number>,
 ): number {
-  return calcProductLineItems(product, rateCard, proposalDiscPct).reduce(
+  return calcProductLineItems(product, rateCard, proposalDiscPct, addonProductCounts).reduce(
     (sum, li) => sum + li.totalNet,
     0,
   )
@@ -124,9 +154,10 @@ export function calcGrandTotal(
   rateCard?: RateCardData | null,
 ): number {
   const propDisc = parseFloat(snapshot.proposalDisc) || 0
+  const addonCounts = buildAddonProductCounts(snapshot.products)
 
   const acvTotal = snapshot.products.reduce(
-    (sum, p) => sum + calcProductTotal(p, rateCard, propDisc),
+    (sum, p) => sum + calcProductTotal(p, rateCard, propDisc, addonCounts),
     0,
   )
 
@@ -172,8 +203,9 @@ export function calcAllLineItems(
   rateCard?: RateCardData | null,
 ): { productName: string; items: LineItem[] }[] {
   const propDisc = parseFloat(snapshot.proposalDisc) || 0
+  const addonCounts = buildAddonProductCounts(snapshot.products)
   return snapshot.products.map(p => ({
     productName: p.name,
-    items: calcProductLineItems(p, rateCard, propDisc),
+    items: calcProductLineItems(p, rateCard, propDisc, addonCounts),
   }))
 }

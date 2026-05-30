@@ -7,7 +7,7 @@ import {
   ProposalSnapshot,
   RateCardData,
 } from '@/lib/g2-catalog'
-import { calcProductLineItems } from '@/lib/g2-pricing'
+import { calcProductLineItems, buildAddonProductCounts } from '@/lib/g2-pricing'
 
 const C = {
   rorange: '#FF492C',
@@ -40,17 +40,20 @@ export function ProposalPreview({ snapshot, proposalName, rateCardData, rateCard
   const propDiscPct = parseFloat(snapshot.proposalDisc) || 0
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
+  // Build addon product counts for rate-card volume discount support
+  const addonCounts = buildAddonProductCounts(snapshot.products)
+
   // Per-product summaries
   const prodSummaries = snapshot.products.map(p => {
     const tier = FOUNDATION_TIERS.find(t => t.id === p.basePkg)
 
-    // Line items WITHOUT proposal discount — for per-line display
-    const lineItems = calcProductLineItems(p, rateCardData, 0)
+    // Line items WITHOUT proposal discount — for per-line display (but with volume discounts)
+    const lineItems = calcProductLineItems(p, rateCardData, 0, addonCounts)
     const baseItem = lineItems[0] ?? null
     const addonItems = lineItems.slice(1)
 
     // Product ACV WITH full discount (including proposal)
-    const fullLineItems = calcProductLineItems(p, rateCardData, propDiscPct)
+    const fullLineItems = calcProductLineItems(p, rateCardData, propDiscPct, addonCounts)
     const prodAcv = fullLineItems.reduce((s, li) => s + li.totalNet, 0)
     const prodSubtotal = lineItems.reduce((s, li) => s + li.totalNet, 0)
     const prodListTotal = lineItems.reduce((s, li) => s + li.listPrice * li.qty, 0)
