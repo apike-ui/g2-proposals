@@ -235,7 +235,7 @@ export default function ProposalBuilderPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="no-print bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/proposals')} className="text-gray-400 hover:text-gray-600">

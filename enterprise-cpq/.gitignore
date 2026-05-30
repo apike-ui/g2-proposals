@@ -12,6 +12,12 @@ out/
 # Debug
 npm-debug.log*
 
+# Local JSON file database (runtime fallback when Supabase isn't configured)
+.data/
+
+# Test coverage
+coverage/
+
 # Vercel
 .vercel
 
