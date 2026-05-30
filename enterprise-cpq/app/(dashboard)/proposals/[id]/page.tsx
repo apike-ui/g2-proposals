@@ -5,8 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import {
   FOUNDATION_TIERS, ADDON_CATALOG, NONAVC_CATALOG,
   ProposalProduct, ProposalSnapshot, AddonState, AcctItems,
+  RateCardData,
 } from '@/lib/g2-catalog'
 import { calcGrandTotal, calcProductTotal, buildMultiYearTable, fmtUSD } from '@/lib/g2-pricing'
+import { ProposalPreview } from './ProposalPreview'
 
 interface RateCardOption { id: string; name: string; customer: string }
 interface VersionEntry { id: string; version_number: number; notes: string; created_at: string }
@@ -36,9 +38,9 @@ export default function ProposalBuilderPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [rateCardId, setRateCardId] = useState<string>('')
-  const [rateCardData, setRateCardData] = useState<unknown>(null)
+  const [rateCardData, setRateCardData] = useState<RateCardData | null>(null)
   const [rateCardOptions, setRateCardOptions] = useState<RateCardOption[]>([])
-  const [activeTab, setActiveTab] = useState<'builder' | 'history'>('builder')
+  const [activeTab, setActiveTab] = useState<'builder' | 'preview' | 'history'>('builder')
   const [activeProductIdx, setActiveProductIdx] = useState(0)
   const [versions, setVersions] = useState<VersionEntry[]>([])
   const [enabledAddons, setEnabledAddons] = useState<Set<string>>(new Set(ADDON_CATALOG.map(a => a.id)))
@@ -57,8 +59,9 @@ export default function ProposalBuilderPage() {
     rateCardId: rateCardId || undefined,
   }), [cust, rep, products, acctItems, proposalDisc, contractTerm, startDate, endDate, rateCardId])
 
-  const rcData = rateCardData as Parameters<typeof calcGrandTotal>[1]
+  const rcData = rateCardData
   const grandTotal = calcGrandTotal(buildSnapshot(), rcData)
+  const rateCardName = rateCardId ? (rateCardOptions.find(rc => rc.id === rateCardId)?.name ?? null) : null
 
   useEffect(() => {
     async function load() {
@@ -113,7 +116,7 @@ export default function ProposalBuilderPage() {
     if (!rateCardId) { setRateCardData(null); return }
     fetch(`/api/rate-cards/${rateCardId}`)
       .then(r => r.json())
-      .then(d => setRateCardData(d.rateCard?.card_data || null))
+      .then(d => setRateCardData((d.rateCard?.card_data as RateCardData) || null))
       .catch(() => setRateCardData(null))
   }, [rateCardId])
 
@@ -271,22 +274,31 @@ export default function ProposalBuilderPage() {
 
         {/* Tabs */}
         <div className="flex gap-4 mt-3 border-b border-gray-100 -mb-4">
-          {(['builder', 'history'] as const).map(tab => (
+          {([['builder', 'Builder'], ['preview', 'Preview'], ['history', 'Version History']] as const).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-1 py-2 text-sm font-medium border-b-2 -mb-px capitalize transition-colors ${
+              className={`px-1 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500'
               }`}
               style={activeTab === tab ? { borderColor: '#FF492C', color: '#FF492C' } : {}}
             >
-              {tab === 'builder' ? 'Builder' : 'Version History'}
+              {label}
             </button>
           ))}
         </div>
       </div>
 
-      {activeTab === 'history' ? (
+      {activeTab === 'preview' ? (
+        <div className="flex-1 overflow-y-auto p-6">
+          <ProposalPreview
+            snapshot={buildSnapshot()}
+            proposalName={proposalName}
+            rateCardData={rcData}
+            rateCardName={rateCardName}
+          />
+        </div>
+      ) : activeTab === 'history' ? (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-3xl mx-auto">
             <div className="card overflow-hidden">
