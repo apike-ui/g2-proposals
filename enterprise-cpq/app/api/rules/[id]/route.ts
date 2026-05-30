@@ -6,9 +6,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     const { name, team, type, condition, active } = body
 
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (name !== undefined) updates.name = name
+    if (team !== undefined) updates.team = team
+    if (type !== undefined) updates.type = type
+    if (condition !== undefined) updates.condition = condition
+    if (active !== undefined) updates.active = active
+
     const { data, error } = await supabaseAdmin
       .from('rules')
-      .update({ name, team, type, condition, active, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', params.id)
       .select()
       .single()

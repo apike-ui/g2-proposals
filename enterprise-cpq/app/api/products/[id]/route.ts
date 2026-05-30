@@ -17,9 +17,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     const { sku, name, description, price, category, unit } = body
 
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (sku !== undefined) updates.sku = sku
+    if (name !== undefined) updates.name = name
+    if (description !== undefined) updates.description = description
+    if (price !== undefined) updates.price = price
+    if (category !== undefined) updates.category = category
+    if (unit !== undefined) updates.unit = unit
+
     const { data, error } = await supabaseAdmin
       .from('products')
-      .update({ sku, name, description, price, category, unit, updated_at: new Date().toISOString() })
+      .update(updates)
       .eq('id', params.id)
       .select().single()
 

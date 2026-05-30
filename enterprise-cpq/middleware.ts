@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import { SessionData, sessionOptions } from '@/lib/session'
 
+// /api/admin/settings is excluded: any logged-in user may update their own account
 const ADMIN_ONLY_PATHS = [
   '/upload',
   '/integrations',
@@ -9,7 +10,7 @@ const ADMIN_ONLY_PATHS = [
   '/rules',
   '/api/upload',
   '/api/integrations',
-  '/api/admin',
+  '/api/admin/users',
   '/api/rules',
 ]
 
