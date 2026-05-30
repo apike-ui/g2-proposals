@@ -38,6 +38,8 @@ export default function SettingsPage() {
   const [userForm, setUserForm] = useState({ username: '', displayName: '', email: '', password: '', role: 'user' as 'admin' | 'user' })
   const [userSaving, setUserSaving] = useState(false)
   const [userError, setUserError] = useState('')
+  const [userSuccess, setUserSuccess] = useState('')
+  const [usersError, setUsersError] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [sendingCreds, setSendingCreds] = useState<string | null>(null)
   const [credsResult, setCredsResult] = useState<{ tempPassword: string; sentTo: string; error?: string } | null>(null)
@@ -54,10 +56,22 @@ export default function SettingsPage() {
 
   async function loadUsers() {
     setUsersLoading(true)
-    const res = await fetch('/api/admin/users')
-    const data = await res.json()
-    setUsers(data.users || [])
-    setUsersLoading(false)
+    setUsersError('')
+    try {
+      const res = await fetch('/api/admin/users')
+      const data = await res.json()
+      if (!res.ok) {
+        setUsersError(data.error || 'Failed to load users')
+        setUsers([])
+      } else {
+        setUsers(data.users || [])
+      }
+    } catch {
+      setUsersError('Network error — could not load users')
+      setUsers([])
+    } finally {
+      setUsersLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -103,6 +117,7 @@ export default function SettingsPage() {
     setEditingUser(null)
     setUserForm({ username: '', displayName: '', email: '', password: '', role: 'user' })
     setUserError('')
+    setUserSuccess('')
     setShowUserModal(true)
   }
 
@@ -110,6 +125,7 @@ export default function SettingsPage() {
     setEditingUser(user)
     setUserForm({ username: user.username, displayName: user.display_name || '', email: user.email || '', password: '', role: user.role })
     setUserError('')
+    setUserSuccess('')
     setShowUserModal(true)
   }
 
@@ -148,13 +164,20 @@ export default function SettingsPage() {
     }
     if (userForm.password) payload.password = userForm.password
 
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const data = await res.json()
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const data = await res.json()
 
-    if (!res.ok) { setUserError(data.error || 'Save failed'); setUserSaving(false); return }
-    setShowUserModal(false)
-    loadUsers()
-    setUserSaving(false)
+      if (!res.ok) { setUserError(data.error || 'Save failed'); setUserSaving(false); return }
+      setShowUserModal(false)
+      setUserSuccess(editingUser ? 'User updated successfully' : `User "${userForm.username}" created with role "${userForm.role}"`)
+      await loadUsers()
+      setTimeout(() => setUserSuccess(''), 5000)
+    } catch {
+      setUserError('Network error — could not save user')
+    } finally {
+      setUserSaving(false)
+    }
   }
 
   async function deleteUser(id: string) {
@@ -290,7 +313,9 @@ export default function SettingsPage() {
             </button>
           </div>
 
+          {userSuccess && <p className="mb-3 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">{userSuccess}</p>}
           {deleteError && <p className="mb-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{deleteError}</p>}
+          {usersError && <p className="mb-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{usersError}</p>}
 
           {usersLoading ? (
             <div className="flex justify-center py-12">

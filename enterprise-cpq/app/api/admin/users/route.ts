@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true })
 
     if (error) throw error
-    return NextResponse.json({ users: data || [] })
+    // Strip password_hash — local JSON DB fallback returns all fields
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const users = (data || []).map(({ password_hash, ...u }: Record<string, unknown>) => u)
+    return NextResponse.json({ users })
   } catch (err) {
     console.error('Users GET:', err)
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
@@ -39,6 +42,9 @@ export async function POST(request: NextRequest) {
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 })
     }
+    if (role && !['admin', 'user'].includes(role)) {
+      return NextResponse.json({ error: 'Role must be admin or user' }, { status: 400 })
+    }
 
     const passwordHash = await bcryptjs.hash(password, 10)
     const { data, error } = await supabaseAdmin
@@ -52,7 +58,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    return NextResponse.json({ user: data })
+    // Strip password_hash from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password_hash, ...safeUser } = (data || {}) as Record<string, unknown>
+    return NextResponse.json({ user: safeUser })
   } catch (err) {
     console.error('Users POST:', err)
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })

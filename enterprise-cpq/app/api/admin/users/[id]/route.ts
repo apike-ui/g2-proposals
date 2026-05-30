@@ -35,7 +35,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-    return NextResponse.json({ user: data })
+    if (!data) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password_hash, ...safeUser } = (data || {}) as Record<string, unknown>
+    return NextResponse.json({ user: safeUser })
   } catch (err) {
     console.error('Users PUT:', err)
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
