@@ -19,13 +19,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Role must be admin or user' }, { status: 400 })
     }
 
-    const updates: Record<string, unknown> = {
-      username,
-      display_name: displayName,
-      role,
-      email: email || null,
-      updated_at: new Date().toISOString(),
-    }
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (username !== undefined) updates.username = username
+    if (displayName !== undefined) updates.display_name = displayName
+    if (role !== undefined) updates.role = role
+    if (email !== undefined) updates.email = email || null
 
     if (password) {
       updates.password_hash = await bcryptjs.hash(password, 10)
