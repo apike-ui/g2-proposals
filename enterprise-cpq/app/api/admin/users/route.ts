@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getIronSession } from 'iron-session'
 import bcryptjs from 'bcryptjs'
 import { SessionData, sessionOptions } from '@/lib/session'
-import { supabaseAdmin } from '@/lib/db'
+import { supabaseAdmin, isMissingColumnError } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,13 +12,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('users')
       .select('id, username, display_name, role, email, created_at')
       .order('created_at', { ascending: true })
 
+    // Deployed DB may predate the email migration — retry without it
+    if (error && isMissingColumnError(error, 'email')) {
+      ;({ data, error } = await supabaseAdmin
+        .from('users')
+        .select('id, username, display_name, role, created_at')
+        .order('created_at', { ascending: true }))
+    }
+
     if (error) throw error
-    return NextResponse.json({ users: data || [] })
+    // Strip password_hash — local JSON DB fallback returns all fields
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const users = (data || []).map(({ password_hash, ...u }: Record<string, unknown>) => u)
+    return NextResponse.json({ users })
   } catch (err) {
     console.error('Users GET:', err)
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
@@ -39,20 +50,43 @@ export async function POST(request: NextRequest) {
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 })
     }
+    if (role && !['admin', 'user'].includes(role)) {
+      return NextResponse.json({ error: 'Role must be admin or user' }, { status: 400 })
+    }
 
     const passwordHash = await bcryptjs.hash(password, 10)
-    const { data, error } = await supabaseAdmin
+    const baseRow = {
+      username,
+      display_name: displayName || username,
+      password_hash: passwordHash,
+      role: role || 'user',
+    }
+
+    let { data, error } = await supabaseAdmin
       .from('users')
-      .insert({ username, display_name: displayName || username, password_hash: passwordHash, role: role || 'user', email: email || null })
+      .insert({ ...baseRow, email: email || null })
       .select('id, username, display_name, role, email')
       .single()
+
+    // Deployed DB may predate the email migration — insert without email so
+    // user creation still works (the email is simply not stored until migrated)
+    if (error && isMissingColumnError(error, 'email')) {
+      ;({ data, error } = await supabaseAdmin
+        .from('users')
+        .insert(baseRow)
+        .select('id, username, display_name, role')
+        .single())
+    }
 
     if (error) {
       const msg = error.code === '23505' ? 'Username already exists' : error.message
       return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    return NextResponse.json({ user: data })
+    // Strip password_hash from response
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password_hash, ...safeUser } = (data || {}) as Record<string, unknown>
+    return NextResponse.json({ user: safeUser })
   } catch (err) {
     console.error('Users POST:', err)
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
