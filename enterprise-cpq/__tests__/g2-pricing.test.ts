@@ -377,6 +377,18 @@ describe('buildMultiYearTable', () => {
     expect(rows.length).toBeGreaterThan(0)
     expect(rows[0].annualAcv).toBe(5000)
   })
+
+  // Regression: the PPTX "Cost by Year" slide must feed buildMultiYearTable the
+  // ANNUAL ACV (calcGrandTotal already returns annual). A previous version
+  // multiplied by 12/term, which halved the annual figure on multi-year deals
+  // (a 24-month contract showed $12,200/yr instead of $24,400/yr).
+  test('cost-by-year annual ACV is calcGrandTotal, not divided by term', () => {
+    const snap = makeSnapshot({ products: [makeProduct({ basePkg: 'professional' })], contractTerm: '24' })
+    const grandTotal = calcGrandTotal(snap) // 18000, annual
+    const rows = buildMultiYearTable(grandTotal, snap.contractTerm)
+    expect(rows[0].annualAcv).toBe(18000)        // not 9000
+    expect(rows[1].totalValue).toBe(36000)       // 2-year contract value = annual * 2
+  })
 })
 
 // ─── calcAllLineItems ──────────────────────────────────────────────────────────────────────────────
@@ -583,6 +595,37 @@ describe('ProposalPreview calculation logic', () => {
     // Without disc: 18000; with 10% off: 16200
     const total = calcGrandTotal(snap)
     expect(total).toBeCloseTo(16200, 0)
+  })
+
+  // Regression: the printable ProposalPreview headline ACV must equal the sum of
+  // per-product ACVs (additive stacking, noDisc add-ons excluded), which is what
+  // calcGrandTotal and create-quote produce. A previous version computed it as
+  // totalSubtotal*(1-propDisc%), which compounded the base discount and wrongly
+  // discounted noDisc add-ons — making the headline disagree with both the SKU
+  // rows in the same document and the generated quote.
+  test('preview ACV (sum of per-product ACVs) matches calcGrandTotal with stacked + noDisc', () => {
+    const p = makeProduct({ basePkg: 'professional', baseDisc: '10' })
+    p.addons['rms'] = { on: true, tierIdx: 0, qty: 1, rate: '', disc: '', cats: '', allCats: false }
+    const snap = makeSnapshot({ products: [p], proposalDisc: '10' })
+    const propDisc = parseFloat(snap.proposalDisc) || 0
+    const counts = buildAddonProductCounts(snap.products)
+
+    // How ProposalPreview now derives the headline ACV
+    const previewAcv = snap.products.reduce(
+      (s, prod) => s + calcProductTotal(prod, null, propDisc, counts), 0,
+    )
+
+    // base 18000*(1-0.20)=14400 + rms 10000 (noDisc, untouched) = 24400
+    expect(previewAcv).toBe(24400)
+    expect(previewAcv).toBe(calcGrandTotal(snap))
+
+    // The old multiplicative formula would have produced 23580 — guard against regressing
+    const subtotal = snap.products.reduce(
+      (s, prod) => s + calcProductTotal(prod, null, 0, counts), 0,
+    )
+    const buggyAcv = Math.round(subtotal * propDisc / 100)
+    expect(subtotal - buggyAcv).toBe(23580)
+    expect(previewAcv).not.toBe(subtotal - buggyAcv)
   })
 
   test('savings calculation: list minus ACV', () => {

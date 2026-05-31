@@ -181,8 +181,11 @@ export async function POST(request: NextRequest) {
     const costSlide = pptx.addSlide()
     addSlideHeader(costSlide, 'Cost by Year')
 
-    const term = parseInt(snapshot.contractTerm) || 12
-    const annualAcv = grandTotal * (12 / term)
+    // calcGrandTotal already returns the ANNUAL ACV, so pass it straight through.
+    // (Previously this multiplied by 12/term, which halved the annual figure on
+    // multi-year contracts — e.g. a 24-month deal showed $12,200/yr instead of
+    // the correct $24,400/yr.)
+    const annualAcv = grandTotal
     const yearRows = buildMultiYearTable(annualAcv, snapshot.contractTerm)
 
     costSlide.addTable(

@@ -88,8 +88,12 @@ export function ProposalPreview({ snapshot, proposalName, rateCardData, rateCard
 
   const totalSubtotal = prodSummaries.reduce((s, p) => s + p.prodSubtotal, 0)
   const totalList = prodSummaries.reduce((s, p) => s + p.prodListTotal, 0)
-  const propDiscAmt = Math.round(totalSubtotal * propDiscPct / 100)
-  const totalAcv = totalSubtotal - propDiscAmt
+  // ACV must equal the sum of per-product ACVs (additive discount stacking,
+  // noDisc add-ons excluded) so the headline matches the SKU summary rows AND
+  // the quote produced by create-quote. Deriving it as totalSubtotal*(1-disc)
+  // diverges from those because it discounts noDisc items and compounds.
+  const totalAcv = prodSummaries.reduce((s, p) => s + p.prodAcv, 0)
+  const propDiscAmt = totalSubtotal - totalAcv
 
   // Non-ACV items
   const nonAcvLines = Object.entries(snapshot.acctItems)
