@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { UserGuide, HelpButton } from './UserGuide'
 
 interface NavItem {
   href: string
@@ -159,6 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userInfo, setUserInfo] = useState<{ displayName: string; username: string; role: string } | null>(null)
+  const [guideTrigger, setGuideTrigger] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -220,6 +222,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {adminNavItems.map(item => <NavLink key={item.href} item={item} pathname={pathname} onClick={close} />)}
             </>
           )}
+
+          <div className="mt-2">
+            <HelpButton onClick={() => { setGuideTrigger(t => !t); close() }} />
+          </div>
         </nav>
 
         {/* User */}
@@ -268,6 +274,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+
+      <UserGuide trigger={guideTrigger} />
     </div>
   )
 }
