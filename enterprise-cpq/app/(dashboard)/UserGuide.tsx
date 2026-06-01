@@ -31,14 +31,14 @@ const STEPS = [
         <p className="text-gray-700 leading-relaxed">
           <strong>G2 Enterprise CPQ</strong> puts everything in one place: configure packages,
           apply rate cards, stack discounts correctly, preview the customer doc, generate a
-          formal quote, and push the deal to HubSpot — all without leaving the browser.
+          formal quote, and keep Salesforce current — all without leaving the browser.
         </p>
         <div className="grid grid-cols-2 gap-3 mt-4">
           {[
             { icon: '📋', label: 'Multi-product proposals', sub: 'One doc, many profiles' },
             { icon: '💰', label: 'Rate card pricing', sub: 'Segment & account overrides' },
             { icon: '📊', label: 'PPTX export', sub: 'Customer-ready decks' },
-            { icon: '🔗', label: 'HubSpot sync', sub: 'CRM stays current' },
+            { icon: '☁️', label: 'Salesforce-compatible', sub: 'Complements your CRM' },
           ].map(t => (
             <div key={t.label} className="flex items-start gap-2 p-3 rounded-lg border"
               style={{ borderColor: C.border, background: C.light }}>
@@ -321,7 +321,7 @@ const STEPS = [
               },
               {
                 n: '5', color: '#D97706', title: 'Convert to Order',
-                desc: 'When the customer signs, click "Convert to Order" on the quote. Creates an ORD-YYYYMM-XXXX order record with status "pending → fulfilled". If HubSpot is connected, the deal can be created automatically.',
+                desc: 'When the customer signs, click "Convert to Order" on the quote. Creates an ORD-YYYYMM-XXXX order record with status "pending → fulfilled". Reflect the closed deal in Salesforce manually, or use the Integrations connection if your admin has configured it.',
               },
             ].map(step => (
               <div key={step.n} className="flex gap-4 relative z-10">
@@ -379,31 +379,32 @@ const STEPS = [
     ),
   },
 
-  // 8 ── HubSpot integration
+  // 8 ── Salesforce / CRM
   {
-    title: 'HubSpot: keeping the CRM current',
+    title: 'Salesforce: keeping the CRM current',
     badge: 'Integrations',
-    badgeColor: '#F97316',
+    badgeColor: '#0176D3',
     body: (
       <div className="space-y-4">
         <p className="text-gray-700">
-          If your admin has configured the HubSpot access token, the CPQ tool talks
-          directly to your HubSpot CRM.
+          G2's sales team runs on <strong>Salesforce</strong>. The CPQ tool is designed to complement
+          Salesforce — you build and price the deal here, then keep Salesforce updated as the
+          source of record for pipeline, forecasting, and commission.
         </p>
 
         <div className="space-y-3">
           {[
             {
-              icon: '👥', title: 'Contact lookup',
-              desc: 'In the HubSpot tab, search your CRM contacts to pre-fill customer info on a new quote. No copy-pasting from HubSpot.',
+              icon: '🔁', title: 'The intended workflow',
+              desc: 'Build and price the proposal in G2 CPQ → share the PDF or PPTX with the customer → update the Salesforce opportunity stage and amount manually once the pricing is agreed. The CPQ quote number (Q-YYYYMM-XXXX) is your reference to attach to the Salesforce opportunity.',
             },
             {
-              icon: '🔗', title: 'Create a deal from an order',
-              desc: 'When converting a quote to an order, check "Sync to HubSpot". A new deal is created in HubSpot with the deal name, amount, and contact association.',
+              icon: '🔗', title: 'Salesforce direct connection (optional)',
+              desc: 'Admins can configure a Salesforce OAuth connection under Admin → Integrations → Test Connection. Once connected, future releases can pull opportunity data into CPQ and push quote totals back. Connection requires: Instance URL, Client ID, Client Secret, username, and password + security token.',
             },
             {
-              icon: '📦', title: 'Sync product catalog',
-              desc: 'Admins can push the G2 product catalog (SKUs, names, descriptions, prices) to HubSpot Products under Admin → HubSpot → Sync Products. This means HubSpot line items stay consistent with CPQ pricing.',
+              icon: '📋', title: 'What to copy into Salesforce',
+              desc: 'After converting a quote to an order, paste the Order number (ORD-YYYYMM-XXXX) into the Salesforce opportunity description, set the opportunity amount to match the CPQ grand total, and advance the stage to Closed Won.',
             },
           ].map(item => (
             <div key={item.title} className="flex gap-3 p-3 rounded-lg border" style={{ borderColor: C.border, background: C.light }}>
@@ -416,9 +417,13 @@ const STEPS = [
           ))}
         </div>
 
-        <div className="p-3 rounded-lg border text-sm" style={{ borderColor: C.border, background: C.light }}>
-          <p className="font-semibold text-gray-700 mb-1">Setup (admin)</p>
-          <p className="text-gray-600">Go to <strong>Settings → Integrations</strong> and enter the HubSpot Private App access token. Needs <code className="text-xs bg-gray-200 px-1 rounded">crm.objects.contacts.read</code>, <code className="text-xs bg-gray-200 px-1 rounded">crm.objects.deals.write</code>, and <code className="text-xs bg-gray-200 px-1 rounded">e-commerce</code> scopes.</p>
+        <div className="p-3 rounded-lg border text-sm" style={{ borderColor: '#FCD34D', background: '#FFFBEB' }}>
+          <p className="font-semibold text-yellow-800 mb-1">⚠️ HubSpot tab in the sidebar</p>
+          <p className="text-yellow-700">
+            The app includes a <strong>HubSpot</strong> section (Admin → HubSpot) for teams that use HubSpot
+            as a secondary CRM or for marketing automation. Since G2 runs on Salesforce, ignore this section
+            unless your admin has specifically enabled a HubSpot integration for a particular workflow.
+          </p>
         </div>
       </div>
     ),
@@ -600,11 +605,12 @@ const STEPS = [
           {[
             ['New enterprise deal', 'Proposals → New Proposal → configure profiles → Preview → PPTX'],
             ['Customer wants formal pricing', 'Proposals → Create Quote (after saving a version)'],
-            ['Customer signed', 'Quotes → Convert to Order'],
+            ['Customer signed', 'Quotes → Convert to Order → update Salesforce opp'],
             ['Apply negotiated pricing', 'Rate Cards → select card in proposal'],
             ['New team member', 'Settings → Users → Add User'],
             ['Set discount limits', 'Admin → Rules Engine → Max Discount'],
             ['Check product pricing', 'Product Reference (in sidebar)'],
+            ['Salesforce connection', 'Admin → Integrations → Salesforce'],
           ].map(([scenario, path]) => (
             <div key={scenario} className="flex gap-2 text-sm p-2 rounded-lg" style={{ background: C.light }}>
               <span className="font-semibold text-gray-800 min-w-48">{scenario}</span>
